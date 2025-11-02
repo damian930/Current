@@ -71,6 +71,7 @@ F64 get_monotonic_time()
   return time_in_sec;
 }
 
+
 // TODO: Add error hadeling here
 Win32_file open_file(Str8 file_path, U32 access_flags)
 {

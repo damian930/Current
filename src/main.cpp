@@ -37,16 +37,16 @@ int main()
   //   printf("ASCII \n");
   // #endif
 
-  {
-    Scratch scratch = get_scratch();
-    {
-      load_png(scratch.arena, Str8FromClit(scratch.arena, "data/test.pn"));
-    }
-    end_scratch(&scratch);
+  // {
+  //   Scratch scratch = get_scratch();
+  //   {
+  //     load_png(scratch.arena, Str8FromClit(scratch.arena, "data/test.pn"));
+  //   }
+  //   end_scratch(&scratch);
 
 
-    return 0;
-  }
+  //   return 0;
+  // }
 
   // Scratch scratch = get_scratch();
   // {
@@ -69,50 +69,62 @@ int main()
 
   DefereLoop(DEBUG_win32_init(), DEBUG_win32_end())
   {
-    DefereLoop(win32_gfx_init(), win32_gfx_release())
+  DefereLoop(win32_gfx_init(), win32_gfx_release())
+  {
+  Win32_window* window;
+  DefereLoop(window = win32_create_window(), win32_close_window(window)) 
+  {
+  DefereLoop(r_gl_win32_init(), r_gl_win32_end()) 
+  {
+  DefereLoop(r_gl_win32_equip_window(window), r_gl_win32_remove_window()) 
+  { 
+    r_gl_win32_set_frame_rate(144);
+    r_gl_win32_set_screen_origin_top_left();
+
+    // TODO: See if you are fine with the origin pointe of the rect 
+    //       Would make more sense to move it to be from the bottom left when y goes up.
+
+    struct {
+      Rect main_rect;
+    } state = {}; 
+    state.main_rect = rect_make(100, 100, 100, 100);
+
+    while (!win32_window_shoud_close(window))
     {
-      Win32_window* window;
-      DefereLoop(window = win32_create_window(), win32_close_window(window)) 
+      DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
       {
-        DefereLoop(r_gl_win32_init(), r_gl_win32_end()) 
+        // Update the state
         {
-          DefereLoop(r_gl_win32_equip_window(window), r_gl_win32_remove_window()) 
-          { 
-            r_gl_win32_set_frame_rate(144);
-            r_gl_win32_set_screen_origin_bottom_left();
-            
-            int counter = 0;
-            Rect rect = rect_make(100, 100, 100, 100);
-            
-            while (!win32_window_shoud_close(window))
-            {
-              win32_handle_messages(window);
-              
-              rect.x += 10;
-              if (rect.x > 500) {
-                rect.x = 0;
-                counter += 1;
-              }
-
-              if (counter == 2) {
-                counter = 0;
-                r_gl_win32_set_screen_origin_top_left();
-              }
-
-              DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
-              {
-                draw_rect(rect);
-              }
-              
-
-
-            }
+          if (is_key_clicked(window, Key_a)) {
+            state.main_rect.x -= 5;
+          }          
+          if (is_key_clicked(window, Key_d)) {
+            state.main_rect.x += 5;
           }
+
+          if (is_key_clicked(window, Key_s)) {
+            state.main_rect.y += 5;
+          }          
+          if (is_key_clicked(window, Key_w)) {
+            state.main_rect.y -= 5;
+          }
+
+
+        }
+
+        // Draw calls
+        {
+          draw_rect(state.main_rect);
         }
       }
-    }
-  }
 
+    }
+
+  }
+  }
+  }
+  }
+  }
   
   {
     {

@@ -4,6 +4,8 @@
 #include "render/render_gl_win32.h"
 #include "os/core/os_core_win32.h" // TODO: See maybe can pull this into the header file instead of having it here
 
+#include "other/image_stuff/image_loader.h"
+
 ///////////////////////////////////////////////////////////
 // Damian: Opengl state globals
 //
@@ -19,6 +21,7 @@ void DEBUG_load_rect();
 void DEBUG_unload_rect();
 static B32 is_rect_loaded = false;
 static GLuint rect_vbo_id = 0;
+static GLuint rect_ebo_id = 0;
 static GLuint rect_vao_id = 0; 
 static GLuint rect_program_id = 0;
 
@@ -28,41 +31,64 @@ void DEBUG_load_rect()
   if (is_rect_loaded) { return; }
   
   // Creating a buffer for the draw call
-  F32 rect_vertices[] = {
-    0.0f, 1.0f,   // Top left
-    1.0f, 1.0f,   // Top right
-    0.0f, 0.0f,   // Bottom left
-
-    0.0f, 0.0f,   // Bottom left
-    1.0f, 1.0f,   // Top right
-    1.0f, 0.0f    // Bottom right
+  GLfloat rect_vertices[] = {
+    // Pos        // T map
+    0.0f, 1.0f,   0.0f, 1.0f, // Top left
+    1.0f, 1.0f,   1.0f, 1.0f, // Top right
+    0.0f, 0.0f,   0.0f, 0.0f, // Bottom left
+    1.0f, 0.0f,   1.0f, 0.0f, // Bottom right
   };
 
-  GLuint vbo_id, vao_id;
-  glGenBuffers(1, &vbo_id);
+  GLuint rect_indices[] = {
+    0, 1, 2, 
+    1, 2, 3
+  };
+
+  // NOTE: This has to be created first to capture the buffer state for vbo and ebo
+  GLuint vao_id;
   glGenVertexArrays(1, &vao_id);
+  glBindVertexArray(vao_id);
+  
+  GLuint vbo_id;
+  glGenBuffers(1, &vbo_id);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_id);
   glBufferData(GL_ARRAY_BUFFER, sizeof(rect_vertices), rect_vertices, GL_STATIC_DRAW);
-  glBindVertexArray(vao_id);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(F32), (void*)0);
+
+  GLuint ebo_id;
+  glGenBuffers(1, &ebo_id);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo_id);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(rect_indices), rect_indices, GL_STATIC_DRAW);
+
+  // NOTE: This can only be called when the vao and the buffers with data for it are alredy set
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(0 * sizeof(GLfloat)));
   glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
+  glEnableVertexAttribArray(1);
 
   // Creating a program to draw
   GLuint v_shader_id = 0;
   {
-    const char* v_shader_src = 
-      StringLine("#version 330 core")
-      StringLine("layout (location = 0) in vec2 aPos;")
-      StringLine("uniform mat4 projection;")
-      StringLine("uniform mat4 scale;")
-      StringLine("uniform mat4 translate;")
-      StringLine("void main()")
-      StringLine("{")
-      StringLine("  gl_Position = projection * translate * scale * vec4(aPos.x, aPos.y, 0.0, 1.0);")
-      StringLine("}");
+    const char* v_shader_src[] = {
+      StringLine("#version 330 core"),
+      StringNewL,
+      StringLine("layout (location = 0) in vec2 aPos;"),
+      StringLine("layout (location = 1) in vec2 aTexturePos;"),
+      StringNewL,
+      StringLine("uniform mat4 projection;"),
+      StringLine("uniform mat4 scale;"),
+      StringLine("uniform mat4 translate;"),
+      StringNewL,
+      StringLine("out vec2 TextureCoord;"),
+      StringNewL,
+      StringLine("void main()"),
+      StringLine("{"),
+      StringLine("  TextureCoord = aTexturePos;"),
+      StringLine("  gl_Position = projection * translate *  scale * vec4(aPos.x, aPos.y, 0.0, 1.0);"),
+      StringLine("}"),
+    };
 
     v_shader_id = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(v_shader_id, 1, (const GLchar**)&v_shader_src, Null);
+    glShaderSource(v_shader_id, ArrayCount(v_shader_src), (const GLchar**)&v_shader_src, Null);
     glCompileShader(v_shader_id);
     {
       GLint success = 0;
@@ -91,21 +117,28 @@ void DEBUG_load_rect()
         end_scratch(&scratch);
       }
     }
-
   }
     
   GLuint f_shader_id = 0;
   {
-    const char* f_shader_src = 
-      StringLine("#version 330 core")
-      StringLine("out vec4 FragColor;")
-      StringLine("void main()")
-      StringLine("{")
-      StringLine("  FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);")
-      StringLine("}");
+    const char* f_shader_src[] = {
+      StringLine("#version 330 core"),
+      StringNewL,
+      StringLine("in vec2 TextureCoord;"),
+      StringNewL,
+      StringLine("uniform sampler2D texture1;"),
+      StringNewL,
+      StringLine("out vec4 FragColor;") 
+      StringNewL,
+      StringLine("void main()"),
+      StringLine("{"),
+      StringLine("  FragColor = texture(texture1, TextureCoord);"),  
+      StringLine("}"),
+    } ;
+
     
     f_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(f_shader_id, 1, (const GLchar**)&f_shader_src, Null);
+    glShaderSource(f_shader_id, ArrayCount(f_shader_src), (const GLchar**)&f_shader_src, Null);
     glCompileShader(f_shader_id);
     {
       GLint success = 0;
@@ -170,6 +203,7 @@ void DEBUG_load_rect()
 
   is_rect_loaded = true;
   rect_vbo_id = vbo_id;
+  rect_ebo_id = ebo_id;
   rect_vao_id = vao_id;
   rect_program_id = program_id;
 
@@ -186,6 +220,7 @@ void DEBUG_unload_rect()
   
   // TODO: More formal gl cleanup
   rect_vbo_id = 0;
+  rect_ebo_id = 0;
   rect_vao_id = 0; 
   rect_program_id = 0;
 }
@@ -263,14 +298,14 @@ void r_gl_win32_init()
   }
 
   
-  // Loading gl funcs
+  // Loading newer gl funcs
   {
     #define GL_FUNC_EXP(Type, name, parameters) name = (name##_FuncType*)r_gl_win32_load_extension_functions_opt(#name);
-    GL_FUNC_TABLE
+      GL_FUNC_TABLE
     #undef GL_FUNC_EXP
     
     #define GL_FUNC_EXP(Type, name, parameters) Assert(name);
-    GL_FUNC_TABLE
+      GL_FUNC_TABLE
     #undef GL_FUNC_EXP
   }
   
@@ -286,6 +321,7 @@ void r_gl_win32_init()
   g_win32_gl_renderer.frame_arena = arena_alloc(Kilobytes_U64(10), "OpenGL frame arena");
   g_win32_gl_renderer.frame_rate = R_WIN32_GL_DEFAULT_FRAME_RATE;
   g_win32_gl_renderer.is_height_bottom_up = R_WIN32_GL_DEFAULT_IS_HEIGHT_BOTTOM_UP;
+  g_win32_gl_renderer.perm_arena = arena_alloc(Megabytes_U64(10), "Opengl perm(lifetime) arena");
 }
 
 void r_gl_win32_end()
@@ -298,6 +334,8 @@ void r_gl_win32_end()
   // Release all the opengl specific state that was created for the enitire rendered lifetime 
   DEBUG_unload_rect();
   arena_release(g_win32_gl_renderer.frame_arena);
+  FreeLibrary(g_win32_gl_renderer.opengl32_dll_module);
+
   g_win32_gl_renderer = GL_renderer{};
 }
 
@@ -341,24 +379,35 @@ void DEBUG_r_gl_win32_render_rect(Rect rect);
 
 void r_gl_win32_begin_frame()
 {
-  // TODO: This might be stored into some state per frame thing called: Current frame data
-  Arena* frame_arena     = g_win32_gl_renderer.frame_arena;
-  Frame_data** frame_data = &g_win32_gl_renderer.frame_data;
-  Assert(*frame_data == 0);
+  Win32_window* window = g_win32_gl_renderer.window;
   
-  arena_clear(g_win32_gl_renderer.frame_arena);
-  *frame_data = ArenaPush(frame_arena, Frame_data);
+  // Window per frame stuff
+  {
+    Assert(arena_is_clear(window->frame_event_arena));
+    Assert(window->frame_event_list == 0);
+    window->frame_event_list = ArenaPush(window->frame_event_arena, Event_list);
+    win32_handle_messages(window);
+  }
 
-  Rect frame_rect = win32_get_client_area_rect(g_win32_gl_renderer.window);
-  (*frame_data)->viewport_rect__top_left_top_to_bottom = frame_rect; 
-  glViewport(0, 0, frame_rect.width, frame_rect.height); 
-
-  g_win32_gl_renderer.frame_start_time_in_sec = get_monotonic_time();
+  // Renderer per frame stuff
+  {
+    Arena* frame_arena = g_win32_gl_renderer.frame_arena;
+    Frame_data** frame_data = &g_win32_gl_renderer.frame_data;
+    Assert(arena_is_clear(frame_arena));
+    Assert(*frame_data == 0);
+    *frame_data = ArenaPush(frame_arena, Frame_data);
+    // arena_clear(g_win32_gl_renderer.frame_arena);
+    
+    Rect frame_rect = win32_get_client_area_rect(g_win32_gl_renderer.window);
+    (*frame_data)->viewport_rect__top_left_top_to_bottom = frame_rect; 
+    glViewport(0, 0, frame_rect.width, frame_rect.height); 
+    g_win32_gl_renderer.frame_start_time_in_sec = get_monotonic_time();
+  }
 }
 
 void r_gl_win32_end_frame()
 {
-  // Draw
+  // Draw to the backbuffer
   {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -377,15 +426,23 @@ void r_gl_win32_end_frame()
     while (current_frame_time < frame_time) {
       current_frame_time = get_monotonic_time() - g_win32_gl_renderer.frame_start_time_in_sec;
     }
-    SwapBuffers(g_win32_gl_renderer.window->hdc);
+  }
+  
+  // Display the frame
+  SwapBuffers(g_win32_gl_renderer.window->hdc);
+  
+  // Clear per frame state: Window
+  {
+    Win32_window* window = g_win32_gl_renderer.window;
+    window->frame_event_list = 0;
+    arena_clear(window->frame_event_arena);
   }
 
-  // Clear per frame state
+  // Clear per frame state: Renderer
   {
     arena_clear(g_win32_gl_renderer.frame_arena);
     g_win32_gl_renderer.frame_data = 0;
   }
-
 }
 
 void r_gl_win32_set_frame_rate(U32 frame_rate)
@@ -456,8 +513,68 @@ void DEBUG_r_gl_win32_render_rect(Rect rect)
   glUniformMatrix4fv(glGetUniformLocation(rect_program_id, "scale"), 1, GL_TRUE, (F32*)&mat4_scale.x);
   glUniformMatrix4fv(glGetUniformLocation(rect_program_id, "projection"), 1, GL_TRUE, (F32*)&mat4_ortho.x);
   glUniformMatrix4fv(glGetUniformLocation(rect_program_id, "translate"), 1, GL_TRUE, (F32*)&mat4_translate.x);
+
+  // Load a texture here
+  static GLuint texture = 0;
+  static B32 texture_loaded = false;
+  if (!texture_loaded)
+  {
+    texture_loaded = true;
+
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    // set the texture wrapping parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    // set texture filtering parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    {
+      unsigned char* data = 0;
+      int width = 0, height = 0, nrChannels = 0;
+      {
+        stbi_set_flip_vertically_on_load(true);
+        data = stbi_load("../data/jimmy.png", &width, &height, &nrChannels, 0);
+        int x = 0;
+      }
+      if (data)
+      {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+      }
+      else 
+      {
+        const char* error_message = stbi_failure_reason();
+        fprintf(stderr, "Error loading image: %s\n", error_message);
+      }
+      stbi_image_free(data);
+
+      Arena* arena = g_win32_gl_renderer.perm_arena;
+      B32 do_flip_y = g_win32_gl_renderer.is_height_bottom_up;
+      Image_2d image = load_png(arena, Str8FromClit(arena, "F:/my_code/code_garbage/screen_stuff/data/test.png"), do_flip_y);
+      // Assert(image.n_chanels == 3 || image.n_chanels == 4);
+      // if (image.data_buffer_opt.count > 0)
+      // {
+      //   GLuint gl_image_chanels = GL_RGB;
+      //   if (image.n_chanels == 4) {
+      //     gl_image_chanels = GL_RGBA;
+      //   }
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_buffer_opt.data);
+      // glGenerateMipmap(GL_TEXTURE_2D);
+      // }
+    }
+  }
+
+  // Binding the texture to use for gl
+  {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glUniform1i(glGetUniformLocation(rect_program_id, "texture1"), 0); 
+  }
   
-  glDrawArrays(GL_TRIANGLES, 0, 6);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
   glBindVertexArray(0);
   glUseProgram(0);
@@ -478,4 +595,6 @@ void DEBUG_r_gl_win32_render_rect(Rect rect)
 
 
 
+
 #endif
+

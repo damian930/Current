@@ -6,18 +6,18 @@
 
 #include "base/core.h"
 #include "base/string.h"
-#include "base/string.cpp" // TODO: remove this ))
+#include "base/string.cpp" 
 
 #include "base/arena.h"
 
-struct Texture_2d {
+struct Image_2d {
   U32 width;
   U32 height;
   U32 n_chanels;
-  Data_buffer data_opt;
+  Data_buffer data_buffer_opt;
 };
 
-Texture_2d load_png(Arena* arena, Str8 file_path)
+Image_2d load_png(Arena* arena, Str8 file_path, B32 do_flip_y)
 { 
   Str8 ext = get_file_extension(file_path);
   if (!str8_match_cstr(ext, "png", Str8_match_flag_NONE))
@@ -30,22 +30,32 @@ Texture_2d load_png(Arena* arena, Str8 file_path)
   int width = 0, height = 0, nrChannels = 0;
   Scratch scratch = get_scratch();
   {
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(do_flip_y);
     Str8 path_nt = str8_from_str8_temp_null_term(scratch.arena, file_path);
-    data = stbi_load((char const*)path_nt.data, &width, &height, &nrChannels, 0);
+    data = stbi_load("../data/jimmy.png", &width, &height, &nrChannels, 0);
+    int x = 0;
   }
   end_scratch(&scratch);
 
-  Texture_2d texture = {};
+  Image_2d image = {};
   if (data)
   {
-    texture.width = (U32)width;
-    texture.height = (U32)height;
-    texture.n_chanels = (U32)nrChannels;
+    image.width = (U32)width;
+    image.height = (U32)height;
+    image.n_chanels = (U32)nrChannels;
+
+    U64 data_size = image.width * image.height * image.n_chanels; 
+    image.data_buffer_opt = data_buffer_make(arena, data_size);
+    MemCopy(image.data_buffer_opt.data, data, data_size);
+  }
+  else 
+  {
+    const char* error_message = stbi_failure_reason();
+    fprintf(stderr, "Error loading image: %s\n", error_message);
   }
   stbi_image_free(data);
 
-  return texture;
+  return image;
 }
 
 // Texture load_texture(const char* path)

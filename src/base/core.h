@@ -19,13 +19,18 @@ typedef uint64_t U64;
 typedef float  F32;
 typedef double F64;
 
+typedef S8 B8;
+typedef S16 B16;
 typedef S32 B32;
+typedef S64 B64;
 
 // TODO: Need something better that this 
 #define APP_FAILED(c_str, ...) { printf(c_str, __VA_ARGS__); exit(1); }
 
-#define global static
+#define global        static
 #define local_persist static
+#define file_private  static
+
 #define Null NULL
 #define InvalidIndex_S32 (-1)
 
@@ -40,8 +45,10 @@ typedef S32 B32;
 #endif
 #define StaticAssert(expr, text) static_assert((expr), text)
 
-#define DebugStopHere(...)  Assert(true)
-#define NotImplemented(...) Assert(true)
+// Damian: (...) here are to be able to put anything it. Usually used for string notes.
+#define DebugStopHere(...)   Assert(true)
+#define NotImplemented(...)  Assert(false)
+#define InvalidCodePath(...) Assert(false)
 
 #define ArrayCount(arr) (sizeof(arr) / sizeof(arr[0])) 
 
@@ -58,6 +65,7 @@ typedef S32 B32;
 #define MemSet(mem_p, value_s32, n_bytes_u64)      { memset((void*)mem_p, value_s32, n_bytes_u64); } 
 
 #define StringLine(str) str " \n"
+#define StringNewL "\n"
 
 /* NOTES:
   Stack here is a list that only has the "first" node pointer. Nodes only have the "next" pointer.

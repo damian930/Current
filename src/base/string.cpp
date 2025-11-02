@@ -5,6 +5,14 @@
 #include "arena.h"
 #include "math/math.h"
 
+Data_buffer data_buffer_make(Arena* arena, U64 size)
+{
+  Data_buffer buffer = {};
+  buffer.count = size;
+  buffer.data = ArenaPushArr(arena, U8, size);
+  return buffer;
+}
+
 U64 cstr_len(const char* name)
 {
   U64 len = 0;
@@ -71,32 +79,6 @@ Str8 str8_from_str8_temp_null_term(Arena* arena, Str8 str8)
 ///////////////////////////////////////////////////////////
 // Damian: THIS IS NEW CODE, SO THIS IS SEPARATED, KIND DEBUG
 //
-
-Str8 str8_substring(Str8 str, U64 start_index, U64 end_index)
-{
-  Str8 result = {};
-  {
-    if (start_index > end_index) {
-      SwapVaues(U64, start_index, end_index);
-    }
-    end_index = Min(end_index, str.count);
-    if (start_index < end_index)
-    {
-      result.data = str.data + start_index;
-      result.count = end_index - start_index;
-    }
-  }
-  return result;
-}
-
-void str8_list_push_str(Arena* arena, Str8_list* list, Str8 str)
-{
-  Str8_node* node = ArenaPush(arena, Str8_node);
-  node->str = str;
-  DllPushBack(list, node);
-  list->count += 1;
-}
-
 U8 char_to_lower(U8 ch)
 {
   U8 result = ch;
@@ -124,13 +106,14 @@ U8 normalise_slash(U8 ch)
   return result;
 }
 
-enum Str8_match_flags : U32 {
-  Str8_match_flag_NONE            = (1 << 0),
-  Str8_match_flag_ignore_case     = (1 << 1),
-  Str8_match_flag_normalise_slash = (1 << 2),
-};
+void str8_list_push_str(Arena* arena, Str8_list* list, Str8 str)
+{
+  Str8_node* node = ArenaPush(arena, Str8_node);
+  node->str = str;
+  DllPushBack(list, node);
+  list->count += 1;
+}
 
-// TODO: Modifiers like: ignore_case, ignore_slash_direction, 
 B32 str8_match(Str8 str, Str8 other, U32 flags)
 {
   B32 result = true;
@@ -172,6 +155,23 @@ B32 str8_match_cstr(Str8 str, const char* c_str, U32 flags)
     result = str8_match(str, other_str, flags);
   } 
   end_scratch(&scratch);
+  return result;
+}
+
+Str8 str8_substring(Str8 str, U64 start_index, U64 end_index)
+{
+  Str8 result = {};
+  {
+    if (start_index > end_index) {
+      SwapVaues(U64, start_index, end_index);
+    }
+    end_index = Min(end_index, str.count);
+    if (start_index < end_index)
+    {
+      result.data = str.data + start_index;
+      result.count = end_index - start_index;
+    }
+  }
   return result;
 }
 

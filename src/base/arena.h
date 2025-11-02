@@ -19,8 +19,6 @@ Arena* arena_alloc(U64 n_bytes_to_allocate, const char* name);
 void arena_clear(Arena* arena);
 void arena_release(Arena* arena);
 
-U8* arena_first_usable_byte(Arena* arena);
-
 U8* _arena_push_no_zero(Arena* arena, U64 n_bytes_to_push);
 U8* _arena_push(Arena* arena, U64 n_bytes_to_push);
 #define ArenaPushNoZero(arena_p, Type)           (Type*) _arena_push_no_zero(arena_p, sizeof(Type))
@@ -29,6 +27,9 @@ U8* _arena_push(Arena* arena, U64 n_bytes_to_push);
 #define ArenaPushArr(arena_p, Type, count)       (Type*) _arena_push(arena_p, count * sizeof(Type))
 
 void arena_pop(Arena* arena, U64 n_bytes_to_pop);
+B32 arena_is_clear(Arena* arena);
+
+U8* arena_first_usable_byte(Arena* arena);
 
 ///////////////////////////////////////////////////////////
 // Damian: Scratch arenas stuff

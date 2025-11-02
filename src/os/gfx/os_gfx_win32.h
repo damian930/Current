@@ -20,16 +20,49 @@ enum Key_state {
 
 enum Key {
   Key_NONE,
+  Key_w,
   Key_a,
+  Key_s,
+  Key_d,
   Key_COUNT,
 };
 
+enum Event_type {
+  Event_type_NONE,
+  Event_type_minimize,
+  Event_type_maximize,
+  Event_type_key,
+  Event_type_mouse,
+};
+
+enum Mouse_key {
+  Mouse_key_NONE,
+  Mouse_key_left,
+  Mouse_key_right,
+  Mouse_key_middle,
+  Mouse_key_side_far,
+  Mouse_key_side_near,
+  Mouse_key_COUNT,
+};
+
+// TODO: Change some of these S32 to S16
 struct Event {
+  Event_type type;
+  
   Key key;
-  B32 was_up;
-  B32 was_down;
-  B32 is_up;
-  B32 is_down;
+  B32 key_got_pressed;
+  B32 key_got_released;
+
+  S32 mouse_x;
+  S32 mouse_y;
+
+  Mouse_key mouse_key_pressed;
+  B8 other_pressed_mouse_buttons[Mouse_key_COUNT];
+  // TODO: I dont like this duplication here 
+  Mouse_key mouse_key_released;
+  B8 other_released_mouse_buttons[Mouse_key_COUNT];
+
+  S16 wheen_rotation;
 };
 
 struct Event_node {
@@ -44,17 +77,19 @@ struct Event_list {
   U64 count;
 };
 
-global Arena* event_arena = arena_alloc(Kilobytes_U64(10), "Event arena for win32");
-global Event_list event_list = {};
-// -------------------------
-
 struct Win32_window {
+  // Free list stuff
   B32 is_free;
   Win32_window* next_free;
-
+  
+  // Persistent stuff
   B32 shoud_be_closed;
   HWND handle;
   HDC hdc;
+
+  // Per frame stuff
+  Arena* frame_event_arena;
+  Event_list* frame_event_list;
 };
 
 struct Win32_gfx_state {
@@ -65,9 +100,69 @@ struct Win32_gfx_state {
   U64 free_window_count;
 };
 
+// --DEBUG-----------------
+
+// NOTE: This is something that i am thinking about doing.
+//       Like a nice way to get input to to the called, 
+//       os events are just events (raw), this will be the more usable nice version
+
+// struct Key_nice_data {
+//   Key key;
+//   B32 is_up;
+// };
+// static Key_nice_data a_key_nice_data = {Key_a, false};
+
+// void DEBUG_get_nice_for_a(Win32_window* window)
+// {
+//   for (Event_node* node = window->frame_event_list->first; node != 0; node = node->next)
+//   {
+//     Event* event = window->frame_event_list->first;
+//     if (event.)
+//   }
+// }
+
+B32 is_key_clicked(Win32_window* window, Key key)
+{
+  B32 result = false;
+  for (Event_node* node = window->frame_event_list->first; node != 0; node = node->next)
+  {
+    Event* event = &node->event;
+    if (event->key == key && event->key_got_released)
+    {
+      result = true;
+      break;
+    }    
+  }
+  return result;
+}
+
+// B32 is_key_down(Win32_window* window, Key key)
+// {
+
+// }
+// ------------------------
+
+
 ///////////////////////////////////////////////////////////
 // Damian: Globals
+//
 extern Win32_gfx_state g_win32_gfx_state;
+
+Win32_window* win32_window_from_win32_handle(HWND window_handle)
+{
+  Win32_window* result = 0;
+  U64 max_windows = g_win32_gfx_state.window_count + g_win32_gfx_state.free_window_count;
+  ForEachEx(window_index, max_windows, g_win32_gfx_state.windows_buffer)
+  {
+    Win32_window* test_window = g_win32_gfx_state.windows_buffer + window_index;
+    if (test_window->handle == window_handle)
+    {
+      result = test_window;
+      break;
+    }
+  } 
+  return result;
+}
 
 void win32_gfx_init();
 void win32_gfx_release();
@@ -77,6 +172,8 @@ void win32_close_window(Win32_window* window);
 
 B32 win32_window_shoud_close(Win32_window* window);
 
+// Damian: This just calls the winproc. 
+//         Winproc then captures all the event we need into the frame event list.
 void win32_handle_messages(Win32_window* window) 
 {
   MSG message = {}; 
