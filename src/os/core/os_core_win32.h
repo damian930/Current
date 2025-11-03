@@ -71,6 +71,12 @@ F64 get_monotonic_time()
   return time_in_sec;
 }
 
+// TODO: If this is usefull and tested, then make this more formal
+void win32_fata_error(const char* message)
+{
+  // MessageBoxA(Null, message, "Error", MB_ICONEXCLAMATION);
+  ExitProcess(0);
+}
 
 // TODO: Add error hadeling here
 Win32_file open_file(Str8 file_path, U32 access_flags)

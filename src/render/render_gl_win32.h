@@ -29,32 +29,33 @@ struct Frame_data {
 };
 
 struct GL_renderer {
-  HMODULE opengl32_dll_module;
+  // Self state
+  Arena* state_arena;
 
+  // Stuff
   Win32_window* window;
   HGLRC context;
 
   // Some settings
-  B32 is_height_bottom_up;
+  // B32 is_height_bottom_up;
 
-  Arena* perm_arena;
+  // Arena* perm_arena;
 
   // Persistent frame stuff
   U32 frame_rate;       
 
   // Per frame stuff 
   Arena* frame_arena;          
-  Frame_data* frame_data;      
-  F64 frame_start_time_in_sec;
+  F64* frame_start_time_in_sec;
+  Rect* viewport_rect__top_left_to_bottom_right;
+  DEBUG_draw_rect_list* draw_list;      
 };
+extern HGLRC gl_context;
+extern GL_renderer* g_win32_gl_renderer;
 
-extern GL_renderer g_win32_gl_renderer;
 
-void* r_gl_win32_load_extension_functions_opt(const char* name);
-void* r_gl_win32_load_normal_gl_functions_opt(const char* name);
-
-void r_gl_win32_init();
-void r_gl_win32_end();
+void r_gl_win32_state_init();
+void r_gl_win32_state_release();
 
 void r_gl_win32_equip_window(Win32_window* window);
 void r_gl_win32_remove_window();
@@ -63,12 +64,37 @@ void r_gl_win32_begin_frame();
 void r_gl_win32_end_frame();
 
 void r_gl_win32_set_frame_rate(U32 frame_rate);
-F64 r_gl_wi32_get_frame_rate();
+F64 r_gl_win32_get_frame_rate();
+
+void* r_gl_win32_load_extension_functions_opt(const char* name);
+void* r_gl_win32_load_normal_gl_functions_opt(const char* name);
+
+void gl_load_rect_program();
+void DEV_draw_rect_list(Rect rect);
+
 
 ///////////////////////////////////////////////////////////
 // Damian: OS generic stuff for opengl, these are a part of OpenGL standard
 //
-// NOTE: Link: https://registry.khronos.org/OpenGL/api/GL/glext.h
+#if defined(_WIN64)
+  typedef signed   long long int khronos_ssize_t;
+#else
+  // TODO: This might not be needed
+  typedef signed   long  int     khronos_ssize_t;
+#endif
+
+typedef char GLchar;
+typedef khronos_ssize_t GLsizeiptr;
+
+typedef void (APIENTRY *DEBUGPROC)(GLenum source,
+                                   GLenum type,
+                                   GLuint id,
+                                   GLenum severity,
+                                   GLsizei length,
+                                   const GLchar *message,
+                                   const void *userParam);
+
+// Link: https://registry.khronos.org/OpenGL/api/GL/glext.h
 #define GL_ARRAY_BUFFER         0x8892
 #define GL_STATIC_DRAW          0x88E4
 #define GL_VERTEX_SHADER        0x8B31
@@ -77,6 +103,9 @@ F64 r_gl_wi32_get_frame_rate();
 #define GL_ELEMENT_ARRAY_BUFFER 0x8893
 #define GL_COMPILE_STATUS       0x8B81
 #define GL_LINK_STATUS          0x8B82
+
+#define GL_DEBUG_OUTPUT                   0x92E0
+#define GL_DEBUG_OUTPUT_SYNCHRONOUS       0x8242
 
 #define GL_TEXTURE0                       0x84C0
 #define GL_TEXTURE1                       0x84C1
@@ -111,14 +140,6 @@ F64 r_gl_wi32_get_frame_rate();
 #define GL_TEXTURE30                      0x84DE
 #define GL_TEXTURE31                      0x84DF
 
-#if defined(_WIN64)
-  typedef signed   long long int khronos_ssize_t;
-#else
-  typedef signed   long  int     khronos_ssize_t;
-#endif
-
-typedef char GLchar;
-typedef khronos_ssize_t GLsizeiptr;
 
 // NOTE: These are to be loaded from the wgl call
 #define GL_FUNC_TABLE \
@@ -147,7 +168,14 @@ typedef khronos_ssize_t GLsizeiptr;
   GL_FUNC_EXP(void, glActiveTexture, (GLenum texture)) \
   GL_FUNC_EXP(void, glUniform1i, (GLint location, GLint v0)) \
   GL_FUNC_EXP(void, glUniform1f, (GLint location, GLfloat v0)) \
-  GL_FUNC_EXP(void, glGenerateMipmap, (GLenum target)) 
+  GL_FUNC_EXP(void, glGenerateMipmap, (GLenum target)) \
+  \
+  GL_FUNC_EXP(void, glDebugMessageCallback, (DEBUGPROC callback, void* userParam)) 
+
+// TODO: glDebugMessageCallback is from gl4 or is an extension. 
+//       i dont like to expect opengl 3.3 stuff but then load this.
+//       Its only for dev, but still having something to ensure that it gets loaded 
+//       might be nice
 
 #define GL_FUNC_EXP(Type, name, parameters) typedef Type (name##_FuncType) parameters;
   GL_FUNC_TABLE;
@@ -157,7 +185,44 @@ typedef khronos_ssize_t GLsizeiptr;
   GL_FUNC_TABLE
 #undef GL_FUNC_EXP
 
+///////////////////////////////////////////////////////////
+// Damian: Stuff for wglGetExtensionsStringARB
+//
+// Link: https://registry.khronos.org/OpenGL/extensions/ARB/WGL_ARB_extensions_string.txt
+typedef const char *(WINAPI PFNWGLGETEXTENSIONSSTRINGARBPROC_T) (HDC hdc);
+global PFNWGLGETEXTENSIONSSTRINGARBPROC_T* wglGetExtensionsStringARB = 0;
+#define WGL_DRAW_TO_WINDOW_ARB            0x2001
+#define WGL_DRAW_TO_BITMAP_ARB            0x2002
+#define WGL_SUPPORT_OPENGL_ARB            0x2010
+#define WGL_DOUBLE_BUFFER_ARB             0x2011
+#define WGL_PIXEL_TYPE_ARB                0x2013
+#define WGL_COLOR_BITS_ARB                0x2014
+#define WGL_DEPTH_BITS_ARB                0x2022
+#define WGL_STENCIL_BITS_ARB              0x2023
+#define WGL_TYPE_RGBA_ARB                 0x202B
 
+///////////////////////////////////////////////////////////
+// Damian: Stuff for wglChoosePixelFormatARB
+//
+// Link: https://www.khronos.org/registry/OpenGL/extensions/ARB/WGL_ARB_pixel_format.txt
+typedef BOOL (WINAPI PFNWGLCHOOSEPIXELFORMATARBPROC_T) (HDC hdc, const int *piAttribIList, const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
+global PFNWGLCHOOSEPIXELFORMATARBPROC_T* wglChoosePixelFormatARB = 0;
+
+///////////////////////////////////////////////////////////
+// Damian: Stuff for wglCreateContextAttribsARB
+//
+// Link: https://www.khronos.org/registry/OpenGL/extensions/ARB/WGL_ARB_create_context.txt
+typedef HGLRC (WINAPI PFNWGLCREATECONTEXTATTRIBSARBPROC_T) (HDC hDC, HGLRC hShareContext, const int *attribList);
+global PFNWGLCREATECONTEXTATTRIBSARBPROC_T* wglCreateContextAttribsARB = 0;
+#define WGL_CONTEXT_DEBUG_BIT_ARB              0x00000001
+#define WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB 0x00000002
+#define WGL_CONTEXT_MAJOR_VERSION_ARB          0x2091
+#define WGL_CONTEXT_MINOR_VERSION_ARB          0x2092
+#define WGL_CONTEXT_FLAGS_ARB                  0x2094
+#define ERROR_INVALID_VERSION_ARB              0x2095
+#define WGL_CONTEXT_PROFILE_MASK_ARB           0x9126
+#define WGL_CONTEXT_CORE_PROFILE_BIT_ARB       0x00000001
+#define ERROR_INVALID_PROFILE_ARB              0x2096
 
 
 

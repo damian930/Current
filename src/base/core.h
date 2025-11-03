@@ -29,6 +29,7 @@ typedef S64 B64;
 
 #define global        static
 #define local_persist static
+#define local         static
 #define file_private  static
 
 #define Null NULL
@@ -66,6 +67,8 @@ typedef S64 B64;
 
 #define StringLine(str) str " \n"
 #define StringNewL "\n"
+
+#define MemberOffset(Type, member) ( (U64)(&(((Type*)0)->member)) - (U64)((Type*)0) )
 
 /* NOTES:
   Stack here is a list that only has the "first" node pointer. Nodes only have the "next" pointer.

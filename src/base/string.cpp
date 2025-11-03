@@ -207,6 +207,23 @@ Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, U32 flags)
   return list;
 }
 
+// TODO: This is DEBUG
+Str8_list str8_split_by_cstr(Arena* arena, Str8 str, const char* sep, U32 flags)
+{
+  Str8_list list = {};
+  Scratch scratch = get_scratch();
+  {
+    list = str8_split_by_str8(arena, str, Str8FromClit(scratch.arena, sep), flags);
+  }
+  end_scratch(&scratch);
+  return list;
+}
+
+// Damian: Not yet doing this, sice then the arena has to also have the string on it
+//         Dont know about that yet
+// Str8_list cstr_split_by_cstr(Arena* arena, const char* str, const char* sep, U32 flags);
+
+
 Str8 get_file_basename(Str8 path)
 {
   Str8 result = {};
