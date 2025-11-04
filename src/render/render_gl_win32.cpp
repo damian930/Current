@@ -19,8 +19,10 @@
 #define R_WIN32_GL_DEFAULT_FRAME_RATE ((U32)60)
 #define R_WIN32_GL_DEFAULT_IS_HEIGHT_BOTTOM_UP false
 
-HGLRC gl_context = 0;
-GL_renderer* g_win32_gl_renderer = 0;
+HWND gl_context_fake_window_handle = 0;
+HDC gl_context_fake_window_hdc     = 0;
+HGLRC gl_context                   = 0;
+GL_renderer* g_win32_gl_renderer   = 0;
 
 // TODO: Maybe move these to header with extern
 file_private B32 is_rect_program_loaded = false;
@@ -33,9 +35,9 @@ void gl_win32_init_helper()
 {
   // Creating a fake window context to get the loading functions for the real context
   WNDCLASSEXW fake_window_class = {};
-  HWND fake_window_handle = {};
-  HDC fake_hdc = {};
-  HGLRC fake_gl_context = {};
+  HWND fake_window_handle       = {};
+  HDC fake_hdc                  = {};
+  HGLRC fake_gl_context         = {};
   { 
     // Damian: A predefine win32 class might also be used here, 
     //         eg: Static --> https://learn.microsoft.com/en-us/windows/win32/winmsg/about-window-classes
@@ -88,13 +90,80 @@ void gl_win32_init_helper()
     }
 
     // Clear all the stuff
-    wglMakeCurrent(Null, Null);
+    wglMakeCurrent(fake_hdc, Null);
     wglDeleteContext(fake_gl_context);
-    ReleaseDC(fake_window_handle, fake_hdc);
-    DestroyWindow(fake_window_handle);
-    UnregisterClassW(fake_window_class.lpszClassName, GetModuleHandleW(Null));
+
+    // Damian: I am not clearing this, since i want to load all the stuff for gl usage at layer init.
+    //         Technically i am "leacking" the window to the system. 
+    //         But its fine, this way i can easily just load it all here,
+    //         which otherwise i dont see where to comfortably do without some static(local) 
+    //         one per runtime loading.
+    // ReleaseDC(fake_window_handle, fake_hdc);
+    // DestroyWindow(fake_window_handle);
+    // UnregisterClassW(fake_window_class.lpszClassName, GetModuleHandleW(Null));
   }
 
+  // Creating the real context 
+  HGLRC real_context = {};
+  {
+    int pf = 0;
+    UINT num_formats = 0;
+    int pf_attrs[] =
+    {
+      WGL_DRAW_TO_WINDOW_ARB, 1,
+      WGL_SUPPORT_OPENGL_ARB, 1,
+      WGL_DOUBLE_BUFFER_ARB, 1,
+      WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+      WGL_COLOR_BITS_ARB, 32,
+      WGL_DEPTH_BITS_ARB, 24,
+      WGL_STENCIL_BITS_ARB, 8,
+      0
+    };
+    wglChoosePixelFormatARB(fake_hdc, pf_attrs, 0, 1, &pf, &num_formats);
+
+    // Loading gl functions
+    int attrib[] =
+    {
+        WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+        WGL_CONTEXT_MINOR_VERSION_ARB, 3,
+        WGL_CONTEXT_PROFILE_MASK_ARB,  WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+      #if DEBUG_MODE
+        // ask for debug context for non "Release" builds
+        // this is so we can enable debug callback
+        WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
+      #endif
+        0,
+    };
+    real_context = wglCreateContextAttribsARB(fake_hdc, NULL, attrib);
+    BOOL ok = wglMakeCurrent(fake_hdc, real_context);
+
+    // Loading newer gl funcs
+    #define GL_FUNC_EXP(Type, name, parameters) name = (name##_FuncType*)r_gl_win32_load_extension_functions_opt(#name);
+      GL_FUNC_TABLE
+    #undef GL_FUNC_EXP
+    
+    #define GL_FUNC_EXP(Type, name, parameters) Assert(name);
+      GL_FUNC_TABLE
+    #undef GL_FUNC_EXP
+
+    #if DEBUG_MODE
+      // enable debug callback
+      glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+      glDebugMessageCallback(r_gl_debug_message_callback, NULL);
+    #endif
+  }
+
+  gl_context_fake_window_handle = fake_window_handle;
+  gl_context_fake_window_hdc    = fake_hdc;
+  gl_context                    = real_context;
+
+  gl_load_rect_program();
+
+  // Damian: The fake window and the hdc for it are leacked here.
+  //         The contect created get invalidated if the dc for which it is context gets released.
+  //         
+  // TODO: Maybe store the hdc just to have it clear that i leack it (kind of),
+  //       then remove it when render layer state is released.
 }
 
 // ----
@@ -115,6 +184,15 @@ void r_gl_win32_state_init()
 
 void r_gl_win32_state_release()
 {
+  wglMakeCurrent(gl_context_fake_window_hdc, Null);
+  wglDeleteContext(gl_context);
+  gl_context = 0;
+
+  ReleaseDC(gl_context_fake_window_handle, gl_context_fake_window_hdc);
+  DestroyWindow(gl_context_fake_window_handle);
+  gl_context_fake_window_hdc = 0;
+  gl_context_fake_window_handle = 0;
+
   arena_release(g_win32_gl_renderer->state_arena);
   g_win32_gl_renderer = 0;
 }
@@ -127,7 +205,8 @@ void r_gl_win32_equip_window(Win32_window* window)
   HDC hdc = window->hdc;
   g_win32_gl_renderer->window = window;
 
-  // Set up the pixel format for the gl context
+  wglMakeCurrent(hdc, gl_context);
+
   int pf = 0;
   UINT num_formats = 0;
   int pf_attrs[] =
@@ -143,7 +222,8 @@ void r_gl_win32_equip_window(Win32_window* window)
   };
   wglChoosePixelFormatARB(hdc, pf_attrs, 0, 1, &pf, &num_formats);
 
-  // Damian: This is the same as in the gl init call  
+  // Damian: This here is taked from the rad dbg gl setup.
+  //         This is very weird and win32 + gl is not great when it comes to set up.
   PIXELFORMATDESCRIPTOR pfd = {};
   pfd.nSize        = sizeof(PIXELFORMATDESCRIPTOR);
   pfd.nVersion     = 1;
@@ -153,47 +233,12 @@ void r_gl_win32_equip_window(Win32_window* window)
   pfd.cDepthBits   = 24; 
   pfd.cStencilBits = 8;  
   pfd.iLayerType   = PFD_MAIN_PLANE; 
-
-  DescribePixelFormat(hdc, pf, sizeof(pfd), &pfd);
+  // Damian: Not calling describe and choose pf, since technically we have already done that with the wgl call.
+  //         But we still have to create the pfd to pass into the SetPixel call, so here it is.
+  //         Its the same as from the fake window, just copy_paste.
   SetPixelFormat(hdc, pf, &pfd);
 
-  // TODO: This shoud not be node per window FOR SURE
-  {
-    // Loading gl functions
-    int attrib[] =
-    {
-        WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
-        WGL_CONTEXT_MINOR_VERSION_ARB, 5,
-        WGL_CONTEXT_PROFILE_MASK_ARB,  WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-  // #ifndef NDEBUG
-  //       // ask for debug context for non "Release" builds
-  //       // this is so we can enable debug callback
-  //       WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_DEBUG_BIT_ARB,
-  // #endif
-        0,
-    };
-    gl_context = wglCreateContextAttribsARB(window->hdc, NULL, attrib);
-    BOOL ok = wglMakeCurrent(window->hdc, gl_context);
-
-    // Loading newer gl funcs
-    {
-      #define GL_FUNC_EXP(Type, name, parameters) name = (name##_FuncType*)r_gl_win32_load_extension_functions_opt(#name);
-        GL_FUNC_TABLE
-      #undef GL_FUNC_EXP
-      
-      #define GL_FUNC_EXP(Type, name, parameters) Assert(name);
-        GL_FUNC_TABLE
-      #undef GL_FUNC_EXP
-
-      #ifndef DEBUG_MODE
-        // enable debug callback
-        glDebugMessageCallback(&_gl_debug_callback_func, NULL);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-      #endif
-    }
-
-    gl_load_rect_program();
-  }
+  wglMakeCurrent(hdc, gl_context);
 }
 
 void r_gl_win32_remove_window()
@@ -336,9 +381,9 @@ void* r_gl_win32_load_extension_functions_opt(const char* name)
   return p;
 }
 
-void _gl_debug_callback_func(GLenum source, GLenum type, GLuint id, 
-                             GLenum severity, GLsizei length, 
-                             const GLchar *message, const void *userParam
+void r_gl_debug_message_callback(GLenum source, GLenum type, GLuint id, 
+                                 GLenum severity, GLsizei length, 
+                                 const GLchar *message, const void *userParam
 ) {
   // Damian: Apparently this wont be getting shader errors. 
   //         Since glsl compiler and linker are a separate thing.

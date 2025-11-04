@@ -43,23 +43,26 @@ int main()
   DefereLoop(win32_gfx_init(), win32_gfx_release())
   DefereLoop(window = win32_create_window(), win32_close_window(window)) 
   DefereLoop(r_gl_win32_state_init(), r_gl_win32_state_release()) 
-  DefereLoop(r_gl_win32_equip_window(window), r_gl_win32_remove_window()) 
   {
-    r_gl_win32_set_frame_rate(144);
-    while (!win32_window_shoud_close(window))
+    DefereLoop(r_gl_win32_equip_window(window), r_gl_win32_remove_window()) 
     {
-      DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
+      r_gl_win32_set_frame_rate(144);
+      while (!win32_window_shoud_close(window))
       {
- 
-        draw_rect(rect_make(10, 30, 100, 200));
-
-        if (is_key_clicked(window, Key_a)) {
-          printf("Exit on a key. \n");
-          exit(1);
+        DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
+        {
+   
+          draw_rect(rect_make(10, 30, 100, 200));
+  
+          if (is_key_clicked(window, Key_a)) {
+            printf("Exit on a key. \n");
+            exit(1);
+          }
         }
+  
       }
-
     }
+
   }
 
   #define SCREEN_SHOT_DEMO 0

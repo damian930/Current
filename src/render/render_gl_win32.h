@@ -8,71 +8,6 @@
 #include "base/core.h"
 #include "os/gfx/os_gfx_win32.h"
 
-// TODO: These might not be good here
-struct DEBUG_draw_rect_node {
-  DEBUG_draw_rect_node* prev;
-  DEBUG_draw_rect_node* next;
-  Rect rect;
-};
-
-struct DEBUG_draw_rect_list {
-  DEBUG_draw_rect_node* first;
-  DEBUG_draw_rect_node* last;
-  U64 count;
-};
-
-// ===================================
-
-struct Frame_data {
-  Rect viewport_rect__top_left_top_to_bottom;
-  DEBUG_draw_rect_list draw_list;
-};
-
-struct GL_renderer {
-  // Self state
-  Arena* state_arena;
-
-  // Stuff
-  Win32_window* window;
-  HGLRC context;
-
-  // Some settings
-  // B32 is_height_bottom_up;
-
-  // Arena* perm_arena;
-
-  // Persistent frame stuff
-  U32 frame_rate;       
-
-  // Per frame stuff 
-  Arena* frame_arena;          
-  F64* frame_start_time_in_sec;
-  Rect* viewport_rect__top_left_to_bottom_right;
-  DEBUG_draw_rect_list* draw_list;      
-};
-extern HGLRC gl_context;
-extern GL_renderer* g_win32_gl_renderer;
-
-
-void r_gl_win32_state_init();
-void r_gl_win32_state_release();
-
-void r_gl_win32_equip_window(Win32_window* window);
-void r_gl_win32_remove_window();
-
-void r_gl_win32_begin_frame();
-void r_gl_win32_end_frame();
-
-void r_gl_win32_set_frame_rate(U32 frame_rate);
-F64 r_gl_win32_get_frame_rate();
-
-void* r_gl_win32_load_extension_functions_opt(const char* name);
-void* r_gl_win32_load_normal_gl_functions_opt(const char* name);
-
-void gl_load_rect_program();
-void DEV_draw_rect_list(Rect rect);
-
-
 ///////////////////////////////////////////////////////////
 // Damian: OS generic stuff for opengl, these are a part of OpenGL standard
 //
@@ -86,13 +21,6 @@ void DEV_draw_rect_list(Rect rect);
 typedef char GLchar;
 typedef khronos_ssize_t GLsizeiptr;
 
-typedef void (APIENTRY *DEBUGPROC)(GLenum source,
-                                   GLenum type,
-                                   GLuint id,
-                                   GLenum severity,
-                                   GLsizei length,
-                                   const GLchar *message,
-                                   const void *userParam);
 
 // Link: https://registry.khronos.org/OpenGL/api/GL/glext.h
 #define GL_ARRAY_BUFFER         0x8892
@@ -170,7 +98,7 @@ typedef void (APIENTRY *DEBUGPROC)(GLenum source,
   GL_FUNC_EXP(void, glUniform1f, (GLint location, GLfloat v0)) \
   GL_FUNC_EXP(void, glGenerateMipmap, (GLenum target)) \
   \
-  GL_FUNC_EXP(void, glDebugMessageCallback, (DEBUGPROC callback, void* userParam)) 
+  GL_FUNC_EXP(void, glDebugMessageCallback, (void (*) (GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam), const void * userdata)) 
 
 // TODO: glDebugMessageCallback is from gl4 or is an extension. 
 //       i dont like to expect opengl 3.3 stuff but then load this.
@@ -223,6 +151,70 @@ global PFNWGLCREATECONTEXTATTRIBSARBPROC_T* wglCreateContextAttribsARB = 0;
 #define WGL_CONTEXT_PROFILE_MASK_ARB           0x9126
 #define WGL_CONTEXT_CORE_PROFILE_BIT_ARB       0x00000001
 #define ERROR_INVALID_PROFILE_ARB              0x2096
+
+// TODO: These might not be good here
+struct DEBUG_draw_rect_node {
+  DEBUG_draw_rect_node* prev;
+  DEBUG_draw_rect_node* next;
+  Rect rect;
+};
+
+struct DEBUG_draw_rect_list {
+  DEBUG_draw_rect_node* first;
+  DEBUG_draw_rect_node* last;
+  U64 count;
+};
+
+// ===================================
+
+struct Frame_data {
+  Rect viewport_rect__top_left_top_to_bottom;
+  DEBUG_draw_rect_list draw_list;
+};
+
+struct GL_renderer {
+  // Self state
+  Arena* state_arena;
+
+  // Stuff
+  Win32_window* window;
+
+  // Persistent frame stuff
+  U32 frame_rate;       
+
+  // Per frame stuff 
+  Arena* frame_arena;          
+  F64* frame_start_time_in_sec;
+  Rect* viewport_rect__top_left_to_bottom_right;
+  DEBUG_draw_rect_list* draw_list;      
+};
+
+extern HWND gl_context_fake_window_handle;
+extern HDC gl_context_fake_window_hdc;
+extern HGLRC gl_context;
+extern GL_renderer* g_win32_gl_renderer;
+
+void r_gl_win32_state_init();
+void r_gl_win32_state_release();
+
+void r_gl_win32_equip_window(Win32_window* window);
+void r_gl_win32_remove_window();
+
+void r_gl_win32_begin_frame();
+void r_gl_win32_end_frame();
+
+void r_gl_win32_set_frame_rate(U32 frame_rate);
+F64 r_gl_win32_get_frame_rate();
+
+void* r_gl_win32_load_extension_functions_opt(const char* name);
+void* r_gl_win32_load_normal_gl_functions_opt(const char* name);
+
+void r_gl_debug_message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam);
+                             
+void gl_load_rect_program();
+void DEV_draw_rect_list(Rect rect);
+
+
 
 
 
