@@ -6,6 +6,8 @@
 #include <stdio.h>    // Printf
 #include <string.h>   // For memset and stuff
 
+// TODO: Add rjd/martins like preprocesor define for platforms, bitnes, debug/release ...
+
 typedef int8_t   S8;
 typedef int16_t  S16;
 typedef int32_t  S32;

@@ -21,7 +21,6 @@
 typedef char GLchar;
 typedef khronos_ssize_t GLsizeiptr;
 
-
 // Link: https://registry.khronos.org/OpenGL/api/GL/glext.h
 #define GL_ARRAY_BUFFER         0x8892
 #define GL_STATIC_DRAW          0x88E4
@@ -66,8 +65,7 @@ typedef khronos_ssize_t GLsizeiptr;
 #define GL_TEXTURE28                      0x84DC
 #define GL_TEXTURE29                      0x84DD
 #define GL_TEXTURE30                      0x84DE
-#define GL_TEXTURE31                      0x84DF
-
+#define GL_TEXTURE31                      0x84DF  
 
 // NOTE: These are to be loaded from the wgl call
 #define GL_FUNC_TABLE \
@@ -96,6 +94,7 @@ typedef khronos_ssize_t GLsizeiptr;
   GL_FUNC_EXP(void, glActiveTexture, (GLenum texture)) \
   GL_FUNC_EXP(void, glUniform1i, (GLint location, GLint v0)) \
   GL_FUNC_EXP(void, glUniform1f, (GLint location, GLfloat v0)) \
+  GL_FUNC_EXP(void, glUniform4f, (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3)) \
   GL_FUNC_EXP(void, glGenerateMipmap, (GLenum target)) \
   \
   GL_FUNC_EXP(void, glDebugMessageCallback, (void (*) (GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam), const void * userdata)) 
@@ -153,10 +152,22 @@ global PFNWGLCREATECONTEXTATTRIBSARBPROC_T* wglCreateContextAttribsARB = 0;
 #define ERROR_INVALID_PROFILE_ARB              0x2096
 
 // TODO: These might not be good here
+struct Texture2D {
+  GLuint gl_id;
+  U32 width;
+  U32 height;
+  U32 n_chanels;
+};
+
 struct DEBUG_draw_rect_node {
   DEBUG_draw_rect_node* prev;
   DEBUG_draw_rect_node* next;
+  
+  B32 is_texture;
+  B32 is_rect;
   Rect rect;
+  Color rect_color;
+  Texture2D texture;
 };
 
 struct DEBUG_draw_rect_list {
@@ -212,11 +223,7 @@ void* r_gl_win32_load_normal_gl_functions_opt(const char* name);
 void r_gl_debug_message_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam);
                              
 void gl_load_rect_program();
-void DEV_draw_rect_list(Rect rect);
-
-
-
-
+void DEV_draw_rect_list(DEBUG_draw_rect_node* node);
 
 
 

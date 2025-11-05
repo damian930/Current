@@ -1,62 +1,52 @@
 #ifndef EXTRA_IMAGE_LOADER_H
 #define EXTRA_IMAGE_LOADER_H
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "external/stb/stb_image.h"
-
 #include "base/core.h"
 #include "base/string.h"
-#include "base/string.cpp" 
-
 #include "base/arena.h"
+#include "os/core/os_core_win32.h"
 
-struct Image_2d {
+#include "third_party/stb/stb_truetype.h"
+
+struct Image2D {
   U32 width;
   U32 height;
   U32 n_chanels;
   Data_buffer data_buffer_opt;
 };
 
-Image_2d load_png(Arena* arena, Str8 file_path, B32 do_flip_y)
-{ 
-  Str8 ext = get_file_extension(file_path);
-  if (!str8_match_cstr(ext, "png", Str8_match_flag_NONE))
-  {
-    printf("NO MATCH PNG \n");
-    exit(1);
-  }
+Image2D load_png(Arena* arena, Str8 file_path, B32 do_flip_y);
+Image2D create_bitmap_for_char_rgba(Arena* arena, stbtt_fontinfo* font_info, U8 codepoint, U32 font_size);
 
-  unsigned char* data = 0;
-  int width = 0, height = 0, nrChannels = 0;
-  Scratch scratch = get_scratch();
-  {
-    stbi_set_flip_vertically_on_load(do_flip_y);
-    Str8 path_nt = str8_from_str8_temp_null_term(scratch.arena, file_path);
-    data = stbi_load("../data/jimmy.png", &width, &height, &nrChannels, 0);
-    int x = 0;
-  }
-  end_scratch(&scratch);
 
-  Image_2d image = {};
-  if (data)
-  {
-    image.width = (U32)width;
-    image.height = (U32)height;
-    image.n_chanels = (U32)nrChannels;
 
-    U64 data_size = image.width * image.height * image.n_chanels; 
-    image.data_buffer_opt = data_buffer_make(arena, data_size);
-    MemCopy(image.data_buffer_opt.data, data, data_size);
-  }
-  else 
-  {
-    const char* error_message = stbi_failure_reason();
-    fprintf(stderr, "Error loading image: %s\n", error_message);
-  }
-  stbi_image_free(data);
 
-  return image;
+#if 0
+#include <stdio.h>
+#define STB_TRUETYPE_IMPLEMENTATION  // force following include to generate implementation
+#include "stb_truetype.h"
+
+char ttf_buffer[1<<25];
+
+int main(int argc, char **argv)
+{
+   stbtt_fontinfo font;
+   unsigned char *bitmap;
+   int w,h,i,j,c = (argc > 1 ? atoi(argv[1]) : 'a'), s = (argc > 2 ? atoi(argv[2]) : 20);
+
+   fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/arialbd.ttf", "rb"));
+
+   stbtt_InitFont(&font, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0));
+   bitmap = stbtt_GetCodepointBitmap(&font, 0,stbtt_ScaleForPixelHeight(&font, s), c, &w, &h, 0,0);
+
+   for (j=0; j < h; ++j) {
+      for (i=0; i < w; ++i)
+         putchar(" .:ioVM@"[bitmap[j*w+i]>>5]);
+      putchar('\n');
+   }
+   return 0;
 }
+#endif
 
 // Texture load_texture(const char* path)
 // {

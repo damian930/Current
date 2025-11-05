@@ -58,6 +58,7 @@ union Vec4_F32 {
 typedef Vec2_F32 Vec2;
 typedef Vec3_F32 Vec3;
 typedef Vec4_F32 Vec4;
+typedef Vec4_F32 Color;
 
 struct Rect {
   F32 x;
@@ -128,9 +129,6 @@ Vec3_F32 vec3_f32(F32 r, F32 g, F32 b, F32 a);
 
 Vec3_F32& operator*=(Vec3_F32& v, F32 x);
 Vec3_F32& operator/=(Vec3_F32& v, F32 x);
-
-#define BLACK vec3_f32(0.0f, 0.0f, 0.0f)
-#define RED vec3_f32(255.0f, 0.0f, 0.0f)
 
 ///////////////////////////////////////////////////////////
 // Damian: Vec4_F32 stuff
@@ -259,8 +257,20 @@ Mat4x4_F32 mat4x4_f32_translate(F32 x, F32 y, F32 z)
 
 // }
 
-
-
+///////////////////////////////////////////////////////////
+// Damian: THESE ARE HERE FOR NOW, I JUST NEED THEM,
+//         BUT YET DONT KNOW WHERE TO PUT THEM
+//
+// Damian: I wanted them to be not caps, but if i define RED as Red,
+//         then i start getting some win32 errors, cause in some structs they use
+//         Red as a memeber. So for now i just put C_ in front of them.
+//         TODO: Deal with this.
+#define C_TRANSPARENT vec4_f32(0.0f, 0.0f, 0.0f, 0.0f)
+#define C_BLACK       vec4_f32(0.0f, 0.0f, 0.0f, 1.0f)
+#define C_WHITE       vec4_f32(1.0f, 1.0f, 1.0f, 1.0f)
+#define C_RED         vec4_f32(1.0f, 0.0f, 0.0f, 1.0f)
+#define C_GREEN       vec4_f32(0.0f, 1.0f, 0.0f, 1.0f)
+#define C_BLUE        vec4_f32(0.0f, 0.0f, 1.0f, 1.0f)
 
 
 #endif

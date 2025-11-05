@@ -4,7 +4,6 @@
 #include "render/render_gl_win32.h"
 #include "os/core/os_core_win32.h" // TODO: See maybe can pull this into the header file instead of having it here
 
-#include "other/image_stuff/image_loader.h"
 
 // TODO: Improve th loading for the context
 //       Fake window
@@ -313,11 +312,16 @@ void r_gl_win32_end_frame()
 
   // Draw to the backbuffer
   {
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     for (DEBUG_draw_rect_node* node = draw_list->first; node != 0; node = node->next) {
-      DEV_draw_rect_list(node->rect);
+      if (node->is_rect) { Assert(!node->is_texture); }
+      if (node->is_texture) { Assert(!node->is_rect); }
+      DEV_draw_rect_list(node);
     }
   }
   
@@ -392,18 +396,47 @@ void r_gl_debug_message_callback(GLenum source, GLenum type, GLuint id,
 ///////////////////////////////////////////////////////////
 // Damian: Draw calls
 //
-void draw_rect(Rect rect)
+void draw_rect(Rect rect, Color color)
 {
   Arena* frame_arena = g_win32_gl_renderer->frame_arena;
   DEBUG_draw_rect_list* list = g_win32_gl_renderer->draw_list;
+  
   DEBUG_draw_rect_node* node = ArenaPush(frame_arena, DEBUG_draw_rect_node);
+  node->is_rect = true;
   node->rect = rect;
+  node->rect_color = color;
+
   DllPushBack(list, node);
   list->count += 1;
 }
 
-void DEV_draw_rect_list(Rect rect)
+void test_draw_texture(Texture2D texture, F32 x, F32 y)
 {
+  Arena* frame_arena = g_win32_gl_renderer->frame_arena;
+  DEBUG_draw_rect_list* list = g_win32_gl_renderer->draw_list;
+  DEBUG_draw_rect_node* node = ArenaPush(frame_arena, DEBUG_draw_rect_node);
+
+  node->is_texture = true;
+  node->texture = texture;
+  node->rect = rect_make(x, y, (F32)texture.width, (F32)texture.height);
+
+  DllPushBack(list, node);
+  list->count += 1;
+}
+
+void test_draw_text(const char* text, U32 font_size, F32 x, F32 y)
+{
+  
+}
+
+void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
+{
+  B32 is_rect       = node->is_rect;
+  B32 is_texture    = node->is_texture;
+  Rect rect         = node->rect;
+  Color rect_color  = node->rect_color;
+  Texture2D texture = node->texture;
+
   Assert(is_rect_program_loaded);
   Assert(g_win32_gl_renderer->viewport_rect__top_left_to_bottom_right);
   
@@ -420,11 +453,31 @@ void DEV_draw_rect_list(Rect rect)
   glUniformMatrix4fv(glGetUniformLocation(rect_program_id, "projection"), 1, GL_TRUE, (F32*)&mat4_ortho.x);
   glUniformMatrix4fv(glGetUniformLocation(rect_program_id, "translate"), 1, GL_TRUE, (F32*)&mat4_translate.x);
 
+  if (is_texture)
+  {
+    glUniform1i(glGetUniformLocation(rect_program_id, "is_texture1"), GL_TRUE); 
+    glUniform1i(glGetUniformLocation(rect_program_id, "texture1"), 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture.gl_id);
+  }
+  else if (is_rect) 
+  {
+    glUniform1i(glGetUniformLocation(rect_program_id, "is_texture1"), GL_FALSE); 
+    glUniform4f(glGetUniformLocation(rect_program_id, "rect_color"), rect_color.r, rect_color.g, rect_color.b, rect_color.a); 
+  }
+  else {
+    InvalidCodePath();
+  }
+
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+  // glActiveTexture(0);
+  // glBindTexture(GL_TEXTURE_2D, 0);
   glBindVertexArray(0);
   glUseProgram(0);
 }
+
+// WIN32_LEAN_AND_MEAN
 
 ///////////////////////////////////////////////////////////
 // Damian: Program loader
@@ -442,8 +495,6 @@ void gl_load_rect_program()
   {
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
-
-    
   }
 
   GLuint vbo = 0;
@@ -483,7 +534,6 @@ void gl_load_rect_program()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
   }
 
-
   GLuint program = 0;
   {
     const char* v_shader_src[] = {
@@ -501,7 +551,7 @@ void gl_load_rect_program()
       StringLine("void main()"),
       StringLine("{"),
       StringLine("  TextureCoord = aTexturePos;"),
-      StringLine("  gl_Position = projectio * translate *  scale * vec4(aPos.x, aPos.y, 0.0, 1.0);"),
+      StringLine("  gl_Position = projection * translate *  scale * vec4(aPos.x, aPos.y, 0.0, 1.0);"),
       StringLine("}"),
     };
 
@@ -510,14 +560,23 @@ void gl_load_rect_program()
       StringNewL,
       StringLine("in vec2 TextureCoord;"),
       StringNewL,
+      StringLine("uniform bool is_texture1;"),
       StringLine("uniform sampler2D texture1;"),
       StringNewL,
-      StringLine("out vec4 FragColor;") 
+      StringLine("uniform vec4 rect_color;"),
+      StringNewL,
+      StringLine("out vec4 FragColor;"),
       StringNewL,
       StringLine("void main()"),
       StringLine("{"),
-      StringLine("  FragColor = vec4(1.0, 1.0, 0.3, 1.0);"),  
-      StringLine("  FragColor = texture(texture1, TextureCoord);"),  
+      StringLine("  if (is_texture1)"),
+      StringLine("  {"),
+      StringLine("    FragColor = texture(texture1, TextureCoord);"),  
+      StringLine("  }"),
+      StringLine("  else"),
+      StringLine("  {"),
+      StringLine("    FragColor = rect_color;"),
+      StringLine("  }"),
       StringLine("}"),
     };
     
@@ -589,6 +648,77 @@ void gl_load_rect_program()
 }
 
 
+///////////////////////////////////////////////////////////
+// Damian: These are debug for now
+//
+#include "other/image_stuff/image_loader.h"
+#include "other/image_stuff/image_loader.cpp"
+
+Image2D DEBUG_crate_bitmap_for_texture(Arena* arena, Image2D image)
+{
+  // TODO: This has to go, this is bullshit
+  Assert(image.n_chanels == 1);
+  U64 image_size = image.width * image.height * image.n_chanels;
+  U64 bitmap_size = image.width * image.height * 4; // Damian: RGBA
+
+  Data_buffer buffer = data_buffer_make(arena, bitmap_size);
+
+  U8* image_byte = image.data_buffer_opt.data;
+  U32* bitmap_pixel = (U32*)buffer.data;
+
+  for (U32 image_y = 0; image_y < image.height; image_y += 1)
+  {
+    for (U32 image_x = 0; image_x < image.width; image_x += 1)
+    {
+      U32 byte = (U32)*image_byte;
+      image_byte += 1;
+      
+      *bitmap_pixel = ((byte << 24) |
+                       (byte << 16) |
+                       (byte << 8)  |
+                       (byte << 0)  );
+      bitmap_pixel += 1;
+    }
+  }
+
+  Image2D result = {};
+  result.width           = image.width;
+  result.height          = image.height;
+  result.n_chanels       = 4;
+  result.data_buffer_opt = buffer;
+  
+  return result;
+}
+
+Texture2D load_texture(Image2D image)
+{
+  // TODO: Assert that the context is valid, if not then we have to warn or something
+  Assert(image.data_buffer_opt.count > 0);
+  Assert(image.n_chanels == 4);
+
+  // TODO: Do we expect the image to be valid here
+
+  GLuint texture = {};
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_buffer_opt.data);
+  glBindTexture(GL_TEXTURE_2D, 0);  
+  // glGenerateMipmap(GL_TEXTURE_2D);
+
+  Texture2D result = {};
+  result.width = image.width;
+  result.height = image.height;
+  result.gl_id = texture;
+  result.n_chanels = 4;
+
+  return result;
+}
 
 
 

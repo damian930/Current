@@ -41,8 +41,7 @@ if "%release_mode%"=="1" echo [release_mode]
 if "%release_mode%"=="1" (echo [release_mode_not_supported] && exit /B 1)
 
 pushd %out_dir_name%
-    set forder_to_include=/I ../src ^
-                          /I ../extern_includes 
+    set forder_to_include=/I ../src
 
     :: These will also be automatically linked together 
     set source_files_to_compile=../src/main.cpp
