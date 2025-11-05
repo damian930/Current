@@ -77,7 +77,7 @@ void gl_win32_init_helper()
 
     // Loadint extensions
     {
-      wglGetExtensionsStringARB = (PFNWGLGETEXTENSIONSSTRINGARBPROC_T*)wglGetProcAddress("wglGetExtensionsStringARB");
+      wglGetExtensionsStringARB = (PFNWGLGETEXTENSIONSSTRINGARBPROC_T*) wglGetProcAddress("wglGetExtensionsStringARB");
       Assert(wglGetExtensionsStringARB); // TODO: This has to load
 
       // Damian: Not matching if extension are present, since i expect them to be present
@@ -385,8 +385,6 @@ void r_gl_debug_message_callback(GLenum source, GLenum type, GLuint id,
                                  GLenum severity, GLsizei length, 
                                  const GLchar *message, const void *userParam
 ) {
-  // Damian: Apparently this wont be getting shader errors. 
-  //         Since glsl compiler and linker are a separate thing.
   printf("GL error: \n");
   printf("%s \n", message);
 }
@@ -503,7 +501,7 @@ void gl_load_rect_program()
       StringLine("void main()"),
       StringLine("{"),
       StringLine("  TextureCoord = aTexturePos;"),
-      StringLine("  gl_Position = projection * translate *  scale * vec4(aPos.x, aPos.y, 0.0, 1.0);"),
+      StringLine("  gl_Position = projectio * translate *  scale * vec4(aPos.x, aPos.y, 0.0, 1.0);"),
       StringLine("}"),
     };
 
@@ -519,7 +517,7 @@ void gl_load_rect_program()
       StringLine("void main()"),
       StringLine("{"),
       StringLine("  FragColor = vec4(1.0, 1.0, 0.3, 1.0);"),  
-      // StringLine("  FragColor = texture(texture1, TextureCoord);"),  
+      StringLine("  FragColor = texture(texture1, TextureCoord);"),  
       StringLine("}"),
     };
     
@@ -573,7 +571,7 @@ void gl_load_rect_program()
           printf("Program link error: \n");
           printf("%s \n", message);
           //OutputDebugStringA(message);
-          Assert(!"Failed to create vertex shader!");
+          // Assert(!"Failed to create vertex shader!");
       }
     }
   }
