@@ -9,11 +9,6 @@
 #include "other/image_stuff/image_loader.h"
 #include "other/image_stuff/image_loader.cpp"
 
-#define STB_TRUETYPE_IMPLEMENTATION
-#ifndef STB_TRUE_TYPE_H
-#define STB_TRUE_TYPE_H
-  #include "third_party/stb/stb_truetype.h"
-#endif
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "third_party/stb/stb_image_write.h"
@@ -197,88 +192,8 @@ void EntryPoint()
     stbi_write_png("test_font_atlas_bitmap.png", g_font_info.font_atlas.width, g_font_info.font_atlas.height, 1, g_font_info.font_atlas.data_buffer.data, 0);
   }
   end_scratch(&scratch);
-  // test_load_font(range_u32(33, 127)); // From '!' to '~'
 }
 
-
-#if 0
-
-void EntryPoint()
-{
-
-
-  
-  Scratch scratch = get_scratch();
-  {
-    stbtt_fontinfo font_info    = {};
-    U32 font_atlas_width        = 1024;
-    U32 font_atlas_height       = 1024;
-    Data_buffer font_atlas_data = {};
-    {
-      Range_U32 asci_supported_range = range_u32(0, 128);
-      U32 count = range_u32_count(asci_supported_range);
-      
-      Str8 ttf_file_str8 = str8_from_cstr(scratch.arena, "../../data/Roboto-Regular.ttf");    
-      Data_buffer ttf_data = read_file_inplace(scratch.arena, ttf_file_str8);
-      Assert(ttf_data.count > 0); // TODO: This has to go
-      
-      stbtt_packedchar* glyph_metrics = ArenaPushArr(scratch.arena, stbtt_packedchar, count);
-      stbtt_pack_range ranges = {(F32)100, 
-                                 (int)asci_supported_range.min, 
-                                 NULL, 
-                                 (int)count, 
-                                 glyph_metrics, 
-                                 Null, Null};
-      font_atlas_data = data_buffer_make(scratch.arena, font_atlas_width * font_atlas_height);
-      
-      stbtt_pack_context pc = {};
-      stbtt_PackBegin(&pc, font_atlas_data.data, font_atlas_width, font_atlas_height, 0, 1, NULL);   
-      stbtt_PackSetOversampling(&pc, 1, 1); 
-      stbtt_PackFontRanges(&pc, ttf_data.data, 0, &ranges, 1);
-      stbtt_PackEnd(&pc);
-      
-      stbtt_InitFont(&font_info, ttf_data.data, stbtt_GetFontOffsetForIndex(ttf_data.data, 0));
-      
-      for (U32 range_index = asci_supported_range.min; range_index < asci_supported_range.max; range_index += 1)
-      {
-        int glyph_index = stbtt_FindGlyphIndex(&font_info, range_index);
-        if (glyph_index != 0) {
-          // Then it is present
-        }
-      }
-
-      F32 scale     = stbtt_ScaleForPixelHeight(&font_info, ranges.font_size);
-      F32 ascent  = {};
-      F32 descent = {};
-      F32 linegap = {};
-      {
-        int int_ascent  = {};
-        int int_descent = {};
-        int int_linegap = {};
-        stbtt_GetFontVMetrics(&font_info, &int_ascent, &int_descent, &int_linegap);
-        ascent  = int_ascent * scale;
-        descent = int_descent * scale;
-        linegap = int_linegap * scale;
-      }
-
-      for (U32 metric_index = 0; metric_index < count; metric_index += 1)
-      {
-        stbtt_packedchar* test = glyph_metrics + metric_index;
-        printf("CHAR: %c --> P0:(%d, %d), P1:(%d, %d) \n", (char)(metric_index), test->x0, test->y0, test->x1, test->y1);
-
-      }
-      
-      stbi_write_png("test_font_atlas_bitmap.png", font_atlas_width, font_atlas_height, 1, font_atlas_data.data, 0);
-    }
-  }
-  
-  
-
-  end_scratch(&scratch);
-
-      
-}
     
-#endif
     
     

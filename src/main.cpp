@@ -101,7 +101,7 @@ int main()
   arena_release(arena);
 
   Win32_window* window = 0;
-  DefereLoop(DEBUG_win32_init(), DEBUG_win32_end())
+  DefereLoop(DEBUG_win32_init(), DEBUG_win32_release())
   DefereLoop(win32_gfx_init(), win32_gfx_release())
   DefereLoop(window = win32_create_window(), win32_close_window(window)) 
   DefereLoop(r_gl_win32_state_init(), r_gl_win32_state_release()) 
@@ -112,47 +112,75 @@ int main()
       r_gl_win32_set_frame_rate(144);
       load_char_textures();
 
-      text_layer_init();
-      {
-        text_prepare_font("../data/Roboto-Regular.ttf", 100);
-        text_load_font();
-      }
       // text_layer_release(); 
       // Damian: Remove this to not worry about this for now
+
+      Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
+      Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 100, Str8FromClit(font_arena, "../data/Roboto-Regular.ttf"));
+
+      for (Font_codepoint_data_node* node = font_info->hash_list->first; 
+           node != 0; 
+           node = node->next
+      ) {
+        printf("%c: (%d, %d), (%d, %d) \n", node->codepoint, node->codepoint_offset.x0, node->codepoint_offset.y0, node->codepoint_offset.x1, node->codepoint_offset.y1);
+      }
+
+      Texture2D font_texture = create_a_texture_from_font_atlas(font_info);
+
+      // stbi_write_png("test_font_atlas_bitmap.png", font_info->font_atlas.width, font_info->font_atlas.height, 1, font_info->font_atlas.data_buffer.data, 0);
 
       while (!win32_window_shoud_close(window))
       {
         DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
         {
+          // Vec2_F32 test_scale = vec2_f32(2.0f, 2.0f);
+          // Vec2_F32 test_gl = vec2_f32(0.25, 0.5);
+          // Vec2_F32 test = test_scale * test_gl;
+          // DebugStopHere();
+
+          test_draw_texture_pro(font_texture, 
+            rect_make(0, 0, 500, 200), 
+            rect_make(50, 50, 800, 800));
+          
           ui_begin_build();
           {
-            ui_begin_box(UI_SizePx(200), UI_SizeChildrenSum(), Axis2_y, C_WHITE, "Key 1");
-            { 
-              ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, C_RED, "Key Text");
+            local B32 is_draw = false;
+            ui_begin_box(UI_SizePx(20), UI_SizePx(20), Axis2_x, C_WHITE, "TEST BUTTON");
+            {
+              if (ui_is_clicked())
               {
-                
+                ToggleBool(is_draw);
               }
-              ui_end_box();
-             
-              ui_begin_box(UI_SizePercentOfParent(1), UI_SizePx(50), Axis2_x, C_GREEN, "Key 2");
-              {
-                if (ui_is_clicked())
-                {
-                  printf("Key 2 \n");
-                }
-              }
-              ui_end_box();
+            }
+            ui_end_box();
 
-              ui_begin_box(UI_SizePercentOfParent(0.66), UI_SizePx(100), Axis2_x, C_BLUE, "Key 3");
-              {
-                if (ui_is_clicked())
+            if (false)
+            {
+              ui_begin_box(UI_SizePx(200), UI_SizeChildrenSum(), Axis2_y, C_WHITE, "Key 1");
+              { 
+                ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, C_RED, "Key Text");
                 {
-                  printf("Key 3 \n");
+                  
                 }
+                ui_end_box();
+               
+                ui_begin_box(UI_SizePercentOfParent(1), UI_SizePx(50), Axis2_x, C_GREEN, "Key 2");
+                {
+                  if (ui_is_clicked())
+                  {
+                    printf("Key 2 \n");
+                  }
+                }
+                ui_end_box();
+  
+                ui_begin_box(UI_SizePercentOfParent(0.66), UI_SizePx(100), Axis2_x, C_BLUE, "Key 3");
+                {
+                  
+                }
+                ui_end_box();
               }
               ui_end_box();
             }
-            ui_end_box();
           }
           ui_end_build();
             

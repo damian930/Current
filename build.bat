@@ -1,5 +1,8 @@
 @echo off
 
+:: Damian: This is here, just cause i cant memoryse the cloc flag to remove the folder
+:: cloc src --exclude-dir=third_party
+
 setlocal enabledelayedexpansion
 
 :: Move to the path where the bat file itself is located

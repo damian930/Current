@@ -188,21 +188,12 @@ UI_Box* ui_allocate_box_helper(
   box->alignment_axis = alignment_axis;
   box->color = color;
   box->key = str8_from_cstr(arena, key);
-  
-  DllPushBack(g_ui_state->current_parent, box);
-  g_ui_state->current_parent->children_count += 1;
-
-  box->parent = g_ui_state->current_parent; 
-  g_ui_state->current_parent = box;
 
   return box;
 }
 
 void ui_begin_build()
 {
-  // Get the new arena for the build
-  // Clear it 
-  // Allocated all the boxes on it
   g_ui_state->prev_frame_root = g_ui_state->root;
   g_ui_state->current_arena_index = (g_ui_state->current_arena_index == 0 ? 1 : 0);
   Arena* tree_arena = ui_current_build_arena(); 
@@ -211,14 +202,11 @@ void ui_begin_build()
   // TODO: I dont like this call here
   Rect ui_rect = *g_win32_gl_renderer->viewport_rect__top_left_to_bottom_right;
 
-  UI_Box* new_root = ArenaPush(tree_arena, UI_Box);
-  new_root->semantic_size[Axis2_x] = UI_size{UI_size_kind_px, ui_rect.width};
-  new_root->semantic_size[Axis2_y] = UI_size{UI_size_kind_px, ui_rect.height};
-  new_root->alignment_axis = Axis2_x;
-  new_root->color = C_BLACK;
-
-  new_root->key = Str8FromClit(tree_arena, "ROOT_KEY_FOR_UI");
-
+  UI_Box* new_root = ui_allocate_box_helper(tree_arena, 
+                                            UI_SizePx(ui_rect.width), 
+                                            UI_SizePx(ui_rect.height), 
+                                            Axis2_x, C_TRANSPARENT, 
+                                            "ROOT_KEY_FOR_UI");
   g_ui_state->root = new_root;
   g_ui_state->current_parent = new_root;
 
@@ -247,6 +235,12 @@ UI_Box* ui_begin_box(
   UI_Box* new_box = ui_allocate_box_helper(ui_current_build_arena(), 
                                            size_kind_x, size_kind_y, 
                                            alignment_axis, color, key);
+  DllPushBack(g_ui_state->current_parent, new_box);
+  g_ui_state->current_parent->children_count += 1;
+
+  new_box->parent = g_ui_state->current_parent; 
+  g_ui_state->current_parent = new_box;
+
   return new_box;
 }
 

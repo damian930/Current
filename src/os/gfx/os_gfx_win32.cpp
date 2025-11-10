@@ -394,6 +394,7 @@ LRESULT CALLBACK WndProc(HWND window_handle, UINT message, WPARAM w_param, LPARA
         case SC_MAXIMIZE:
         {
           event.type = Event_type_maximize;
+          ShowWindow(window_handle, SW_MAXIMIZE);
         } break;
       }
     } break;

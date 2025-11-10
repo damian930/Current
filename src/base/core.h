@@ -62,6 +62,7 @@ typedef S64 B64;
 
 #define SwapVaues(Type, value1, value2) do { Type temp = value1; value1 = value2; value2 = temp; } while(false);
 #define SwapPointers(Type, value1, value2) do { Type temp = *value1; *value1 = *value2; *value2 = temp; } while(false);
+#define ToggleBool(bool_name) do { bool_name = !bool_name; } while(false)
 
 #define Bytes_U64(value)     ((U64)value)
 #define Megabytes_U64(value) (1024 * Kilobytes_U64(value))

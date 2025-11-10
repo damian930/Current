@@ -9,8 +9,8 @@
 #include "base/arena.h"
 #include "base/arena.cpp"
 
-#include "math/math.h"
-#include "math/math.cpp"
+#include "base/math.h"
+#include "base/math.cpp"
 
 // -------------------------
 enum Key_state {

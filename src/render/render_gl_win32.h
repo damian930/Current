@@ -169,7 +169,10 @@ struct DEBUG_draw_rect_node {
   B32 is_rect;
   Rect rect;
   Color rect_color;
+  
   Texture2D texture;
+  Rect texture_source_rect;
+  Rect texture_dest_rect;
 };
 
 struct DEBUG_draw_rect_list {

@@ -441,19 +441,33 @@ void draw_rect(Rect rect, Color color)
   list->count += 1;
 }
 
-void test_draw_texture(Texture2D texture, F32 x, F32 y)
-{
+void test_draw_texture_pro(
+  Texture2D texture, 
+  Rect texture_source_rect,
+  Rect texture_dest_rect
+) {
+  // Crop the texture, then just draw it
   Arena* frame_arena = g_win32_gl_renderer->frame_arena;
   DEBUG_draw_rect_list* list = g_win32_gl_renderer->draw_list;
   DEBUG_draw_rect_node* node = ArenaPush(frame_arena, DEBUG_draw_rect_node);
 
   node->is_texture = true;
   node->texture = texture;
-  node->rect = rect_make(x, y, (F32)texture.width, (F32)texture.height);
+  node->texture_source_rect = texture_source_rect;
+  node->texture_dest_rect = texture_dest_rect;
+
+  // Crop the texture here and pass that data to the renderer shader stuff
 
   DllPushBack(list, node);
   list->count += 1;
 }
+
+// TODO: Uncomment this back
+// void test_draw_texture(Texture2D texture, F32 x, F32 y)
+// {
+  // Rect texture_rect = rect_make(0.0f, 0.0f, (F32)texture.width, (F32)texture.height);
+  // test_draw_texture_pro(texture, texture_rect, x, y);
+// }
 
 void test_draw_text(const char* text, U32 font_size, F32 x, F32 y)
 {
@@ -466,7 +480,16 @@ void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
   B32 is_texture    = node->is_texture;
   Rect rect         = node->rect;
   Color rect_color  = node->rect_color;
+
   Texture2D texture = node->texture;
+  Rect texture_source_rect = node->texture_source_rect;
+  Rect texture_dest_rect = node->texture_dest_rect;
+  if (is_texture) {
+    rect = texture_dest_rect;
+    // TODO: This has to be unionised here, 
+    //       now is time (tonight is the night).
+    //       Cause its getting a bit out of hand now.
+  }
 
   Assert(is_rect_program_loaded);
   Assert(g_win32_gl_renderer->viewport_rect__top_left_to_bottom_right);
@@ -483,6 +506,16 @@ void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
   glUniformMatrix4fv(glGetUniformLocation(rect_program_id, "scale"), 1, GL_TRUE, (F32*)&mat4_scale.x);
   glUniformMatrix4fv(glGetUniformLocation(rect_program_id, "projection"), 1, GL_TRUE, (F32*)&mat4_ortho.x);
   glUniformMatrix4fv(glGetUniformLocation(rect_program_id, "translate"), 1, GL_TRUE, (F32*)&mat4_translate.x);
+
+  glUniform1f(glGetUniformLocation(rect_program_id, "t_width"), texture.width);
+  glUniform1f(glGetUniformLocation(rect_program_id, "t_height"), texture.height);
+
+  glUniform1f(glGetUniformLocation(rect_program_id, "t_source_offset_x"), texture_source_rect.x);
+  glUniform1f(glGetUniformLocation(rect_program_id, "t_source_offset_y"), texture_source_rect.y);
+
+  glUniform1f(glGetUniformLocation(rect_program_id, "t_source_rect_width"), texture_source_rect.width);
+  glUniform1f(glGetUniformLocation(rect_program_id, "t_source_rect_height"), texture_source_rect.height);
+
 
   if (is_texture)
   {
@@ -571,11 +604,27 @@ void gl_load_rect_program()
       StringLine("uniform mat4 scale;"),
       StringLine("uniform mat4 translate;"),
       StringNewL,
+      StringLine("// This is for Raylib DrawTexturePro like texture drawing"),
+      StringLine("uniform float t_width;"),
+      StringLine("uniform float t_height;"),
+      StringLine("uniform float t_source_offset_x;"),
+      StringLine("uniform float t_source_offset_y;"),
+      StringLine("uniform float t_source_rect_width;"),
+      StringLine("uniform float t_source_rect_height;"),
+      StringNewL,
       StringLine("out vec2 TextureCoord;"),
       StringNewL,
       StringLine("void main()"),
       StringLine("{"),
-      StringLine("  TextureCoord = aTexturePos;"),
+      StringLine("  float t_source_offset_x_norm = t_source_offset_x / t_width;"),
+      StringLine("  float t_source_offset_y_norm = t_source_offset_y / t_height;"),
+      
+      StringLine("  float t_source_rect_scale_x_norm = t_source_rect_width / t_height;"),
+      StringLine("  float t_source_rect_scale_y_norm = t_source_rect_height / t_height;"),
+      
+      StringLine("  vec2 t_source_offset = vec2(t_source_offset_x, t_source_offset_y);"),
+      StringLine("  vec2 t_source_scale_for_rect = vec2(t_source_rect_scale_x_norm, t_source_rect_scale_y_norm);"),
+      StringLine("  TextureCoord = t_source_offset + t_source_scale_for_rect * aTexturePos;"),
       StringLine("  gl_Position = projection * translate *  scale * vec4(aPos.x, aPos.y, 0.0, 1.0);"),
       StringLine("}"),
     };
