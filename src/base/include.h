@@ -4,5 +4,6 @@
 #include "core.h"
 #include "arena.h"
 #include "string.h"
+#include "math.h"
 
 #endif

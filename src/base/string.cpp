@@ -3,7 +3,7 @@
 
 #include "string.h"
 #include "arena.h"
-#include "math/math.h"
+// #include "math/math.h"
 
 Data_buffer data_buffer_make(Arena* arena, U64 size)
 {
@@ -29,6 +29,9 @@ Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len)
   str.data  = ArenaPushArr(arena, U8, len);
   str.count = len;
   MemCopy(str.data, cstr, str.count);
+  U8* nt = ArenaPush(arena, U8);
+  *nt = '\0';
+  arena_pop(arena, 1);
   return str;
 }
 
@@ -44,9 +47,11 @@ Str8 str8_from_str8(Arena* arena, Str8 str8)
   result.count = str8.count;
   result.data  = ArenaPushArr(arena, U8, result.count);
   MemCopy(result.data, str8.data, result.count);
+  U8* nt = ArenaPush(arena, U8);
+  *nt = '\0';
+  arena_pop(arena, 1);
   return result; 
 }
-
 
 Str8 str8_from_cstr_len_temp_null_term(Arena* arena, const char* cstr, U64 len)
 {

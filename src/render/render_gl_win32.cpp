@@ -367,8 +367,39 @@ F64 r_gl_win32_get_frame_rate()
   return g_win32_gl_renderer->frame_rate;
 }
 
+Texture2D load_texture(Image2D image)
+{
+  // TODO: Assert that the context is valid, if not then we have to warn or something
+  Assert(image.data_buffer_opt.count > 0);
+  Assert(image.n_chanels == 4);
+
+  // TODO: Do we expect the image to be valid here
+
+  GLuint texture = {};
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_buffer_opt.data);
+  glBindTexture(GL_TEXTURE_2D, 0);  
+  // glGenerateMipmap(GL_TEXTURE_2D);
+
+  Texture2D result = {};
+  result.width = image.width;
+  result.height = image.height;
+  result.gl_id = texture;
+  result.n_chanels = 4;
+
+  return result;
+}
+
+
 ///////////////////////////////////////////////////////////
-// Damian: Opengl renderer managing functions
+// Damian: Helpers and some internal state managers
 //
 void* r_gl_win32_load_extension_functions_opt(const char* name)
 {
@@ -512,16 +543,10 @@ void gl_load_rect_program()
   }
 
   // Filling up the vao
-  {
-      auto test_1 = MemberOffset(Vertex, pos);
-      auto test_2 = MemberOffset(Vertex, tex);
-      DebugStopHere();
-    
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)MemberOffset(Vertex, pos));
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)MemberOffset(Vertex, tex));
-    glEnableVertexAttribArray(1);
-  }
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)MemberOffset(Vertex, pos));
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)MemberOffset(Vertex, tex));
+  glEnableVertexAttribArray(1);
 
   GLuint ebo = 0;
   {
@@ -647,78 +672,6 @@ void gl_load_rect_program()
   rect_program_id        = program;
 }
 
-
-///////////////////////////////////////////////////////////
-// Damian: These are debug for now
-//
-#include "other/image_stuff/image_loader.h"
-#include "other/image_stuff/image_loader.cpp"
-
-Image2D DEBUG_crate_bitmap_for_texture(Arena* arena, Image2D image)
-{
-  // TODO: This has to go, this is bullshit
-  Assert(image.n_chanels == 1);
-  U64 image_size = image.width * image.height * image.n_chanels;
-  U64 bitmap_size = image.width * image.height * 4; // Damian: RGBA
-
-  Data_buffer buffer = data_buffer_make(arena, bitmap_size);
-
-  U8* image_byte = image.data_buffer_opt.data;
-  U32* bitmap_pixel = (U32*)buffer.data;
-
-  for (U32 image_y = 0; image_y < image.height; image_y += 1)
-  {
-    for (U32 image_x = 0; image_x < image.width; image_x += 1)
-    {
-      U32 byte = (U32)*image_byte;
-      image_byte += 1;
-      
-      *bitmap_pixel = ((byte << 24) |
-                       (byte << 16) |
-                       (byte << 8)  |
-                       (byte << 0)  );
-      bitmap_pixel += 1;
-    }
-  }
-
-  Image2D result = {};
-  result.width           = image.width;
-  result.height          = image.height;
-  result.n_chanels       = 4;
-  result.data_buffer_opt = buffer;
-  
-  return result;
-}
-
-Texture2D load_texture(Image2D image)
-{
-  // TODO: Assert that the context is valid, if not then we have to warn or something
-  Assert(image.data_buffer_opt.count > 0);
-  Assert(image.n_chanels == 4);
-
-  // TODO: Do we expect the image to be valid here
-
-  GLuint texture = {};
-  glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_2D, texture);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_buffer_opt.data);
-  glBindTexture(GL_TEXTURE_2D, 0);  
-  // glGenerateMipmap(GL_TEXTURE_2D);
-
-  Texture2D result = {};
-  result.width = image.width;
-  result.height = image.height;
-  result.gl_id = texture;
-  result.n_chanels = 4;
-
-  return result;
-}
 
 
 

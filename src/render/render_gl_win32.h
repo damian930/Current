@@ -8,6 +8,8 @@
 #include "base/core.h"
 #include "os/gfx/os_gfx_win32.h"
 
+#include "other/image_stuff/image_loader.h"
+
 ///////////////////////////////////////////////////////////
 // Damian: OS generic stuff for opengl, these are a part of OpenGL standard
 //
@@ -183,6 +185,12 @@ struct Frame_data {
   DEBUG_draw_rect_list draw_list;
 };
 
+// DATE: November 7th (11:11)
+// TODO: I now realise that i might want the renderer to also be passed around using a handle
+//       I like the state to just exist afte the init call,
+//       but i dont really like to not have the handle to the render itslef,
+//       especially if if is then used elsewhere (not only for draw calls in main)
+
 struct GL_renderer {
   // Self state
   Arena* state_arena;
@@ -217,6 +225,11 @@ void r_gl_win32_end_frame();
 void r_gl_win32_set_frame_rate(U32 frame_rate);
 F64 r_gl_win32_get_frame_rate();
 
+Texture2D load_texture(Image2D image);
+
+///////////////////////////////////////////////////////////
+// Damian: Helpers and some internal state managers
+//
 void* r_gl_win32_load_extension_functions_opt(const char* name);
 void* r_gl_win32_load_normal_gl_functions_opt(const char* name);
 

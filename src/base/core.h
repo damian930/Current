@@ -41,16 +41,21 @@ typedef S64 B64;
 #define ForEach(it_name, arr)          for (U64 it_name = 0; it_name < ArrayCount(arr); it_name += 1)
 #define ForEachEx(it_name, count, arr) for (U64 it_name = 0; it_name < count; it_name += 1)
 
+#define ForEnum_Name(it_name, Enum_name, enum_last_value_name) for (U64 it_name = (Enum_name)0; it_name < enum_last_value_name; it_name += 1)
+#define ForEachEnum(it_name, Enum_name)  ForEnum_Name(it_name, Enum_name, Enum_name##_COUNT)
+
 #define Assert(expr) do {} while(false) 
 #if DEBUG_MODE 
 	#undef Assert
 	#define Assert(expr) do { if (!(expr)) {*((int*)0) = 69;} } while(false)
 #endif
+#define AssertNote(expr, ...) Assert(expr);
+
 #define StaticAssert(expr, text) static_assert((expr), text)
 
 // Damian: (...) here are to be able to put anything it. Usually used for string notes.
-#define DebugStopHere(...)   Assert(true)
-#define NotImplemented(...)  Assert(false)
+#define DebugStopHere(...)  __debugbreak() // TODO: Fix this, this is msvc compiler specific
+#define NotImplemented(...)  Assert(false) // TODO: This might even have to be an exit insted of assert
 #define InvalidCodePath(...) Assert(false)
 
 #define ArrayCount(arr) (sizeof(arr) / sizeof(arr[0])) 
@@ -167,7 +172,7 @@ typedef S64 B64;
 						}
 
 #define StackPush(list, new_node) StackPush_Name((list), (new_node), first, next)
-#define StackPop(list) StackPop_Name(list, next)
+#define StackPop(list) StackPop_Name(list, first, next)
 
 #define QueuePushFront(list, new_node) QueuePushFront_Name((list), (new_node), first, last, next)
 #define QueuePushBack(list, new_node) QueuePushBack_Name((list), (new_node), first, last, next)

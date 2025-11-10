@@ -1,5 +1,7 @@
 @echo off
 
+setlocal enabledelayedexpansion
+
 :: Move to the path where the bat file itself is located
 cd /D "%~dp0"
 
@@ -35,6 +37,21 @@ if "%release%"=="1" (
   set release_mode=1
 )
 
+:: NOTE: In the bat, when using if statements, the '(' has to be on the same line as the if stmt.
+if "%sample%"=="1" (
+  echo [sample_build]
+  pushd "src/_samples_"
+  (
+    if "%text_loading%"=="1" cl /nologo /I ../ /Zi text_loading.cpp 
+    erase *.obj
+    erase *.ilk
+  )
+  popd
+  exit /b
+)
+
+:: ELSE
+
 if "%debug_mode%"=="1"   echo [debug_mode]
 if "%release_mode%"=="1" echo [release_mode]
 
@@ -47,11 +64,6 @@ pushd %out_dir_name%
     set source_files_to_compile=../src/main.cpp
                               
     set libs_to_link_with=
-                          :: ../includes/raylib/include/raylib.lib ^
-                          :: user32.lib ^
-                          :: gdi32.lib ^
-                          :: shell32.lib ^
-                          :: winmm.lib
 
     set compiler_macro_DEBUG_MODE=/D DEBUG_MODE=0
     if "%debug_mode%"=="1" set compiler_macro_DEBUG_MODE=/D DEBUG_MODE=1

@@ -51,7 +51,7 @@ void DEBUG_win32_init()
   }
 }
 
-void DEBUG_win32_end()
+void DEBUG_win32_release()
 {
   // Nothing here for
 }
@@ -148,6 +148,15 @@ Data_buffer read_file(Arena* arena, Win32_file file)
   return buffer;
 }
 
+// TODO: This will be the things that is then constructed of the general(default) os specific things
+Data_buffer read_file_inplace(Arena* arena, Str8 file_path)
+{
+  Win32_file file = open_file(file_path, File_access_flag_read);
+  Data_buffer file_data = read_file(arena, file);
+  close_file(file);
+  return file_data;
+}
+
 void write_to_file(Win32_file file, Data_buffer buffer)
 {
   SetFilePointerEx(file.handle, LARGE_INTEGER{}, Null, FILE_BEGIN);
@@ -156,6 +165,13 @@ void write_to_file(Win32_file file, Data_buffer buffer)
   WriteFile(file.handle, buffer.data, buffer.count, (unsigned long*)&bytes_writen, NULL);
 }
 
+void delete_file(Str8 file_name)
+{
+  Scratch scratch = get_scratch();
+  Str8 file_name_nt = str8_from_str8_temp_null_term(scratch.arena, file_name);
+  DeleteFileA((const CHAR*)file_name_nt.data);
+  end_scratch(&scratch);
+}
 
 
 #endif

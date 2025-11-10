@@ -16,6 +16,9 @@
 #include "other/image_stuff/image_loader.h"
 #include "other/image_stuff/image_loader.cpp"
 
+#include "ui/ui.h"
+#include "ui/ui.cpp"
+
 // CreateCustonWindowDrawF(window_frame_draw_f) {
 //   DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
 //   {
@@ -44,34 +47,7 @@ global stbtt_fontinfo font_info                  = {};
 
 void load_char_textures()
 {
-  Data_buffer font_data = {};
-  {
-    Scratch scratch = get_scratch();
-    Win32_file ttf_file = open_file(Str8FromClit(scratch.arena, "../data/Roboto-Regular.ttf"), File_access_flag_read);
-    font_data = read_file(scratch.arena, ttf_file);  
-    close_file(ttf_file);
-    end_scratch(&scratch);
-  }
-  Assert(font_data.count > 0);
-
-  int tff_font_index = stbtt_InitFont(&font_info, font_data.data, 0);
-  Assert(tff_font_index != 0);
-
-  for (U32 codepoint = 0; codepoint < 128; codepoint += 1)
-  {
-    Pair_char_texture* pair = char_texture_pairs + codepoint;
-    pair->ch = codepoint;
-    Scratch scratch = get_scratch();
-    {
-      Image2D font_image = create_bitmap_for_char_rgba(font_perm_arena, &font_info, codepoint, 100);
-      pair->bitmap = font_image;
-      if (font_image.data_buffer_opt.count > 0) {
-        pair->has_texture = true;
-        pair->texture = load_texture(font_image);
-      }
-    }
-    end_scratch(&scratch);
-  }
+  
 }
 
 Pair_char_texture get_char_texture(U8 codepoint)
@@ -86,6 +62,14 @@ Pair_char_texture get_char_texture(U8 codepoint)
   }  
   return result;
 }
+
+// - Base line for text
+// - Get from stb all the things need to render it for base line (h, w, offsets ...)
+// - Do something with font better
+// - Render some text 
+
+#include "text/text.h"
+#include "text/text.cpp"
 
 // TODO: Remove the extern forlde rand just create a "3rd-party" folder and put all the STBs in there
 int main()
@@ -111,52 +95,173 @@ int main()
   //     x += (dx + kern) * scale;
   // }
 
+  Arena* arena = arena_alloc(Kilobytes_U64(10), "Test arena");
+  Str8 str = str8_from_cstr(arena, "Flopper");
+  // pritnf("Str: %s \n", str.data);
+  arena_release(arena);
+
   Win32_window* window = 0;
   DefereLoop(DEBUG_win32_init(), DEBUG_win32_end())
   DefereLoop(win32_gfx_init(), win32_gfx_release())
   DefereLoop(window = win32_create_window(), win32_close_window(window)) 
   DefereLoop(r_gl_win32_state_init(), r_gl_win32_state_release()) 
+  DefereLoop(ui_state_init(window), ui_state_release()) 
   {
     DefereLoop(r_gl_win32_equip_window(window), r_gl_win32_remove_window()) 
     {
       r_gl_win32_set_frame_rate(144);
       load_char_textures();
 
+      text_layer_init();
+      {
+        text_prepare_font("../data/Roboto-Regular.ttf", 100);
+        text_load_font();
+      }
+      // text_layer_release(); 
+      // Damian: Remove this to not worry about this for now
+
       while (!win32_window_shoud_close(window))
       {
         DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
         {
-
-          auto test_draw_text = [](char* str, F32 x, F32 y) {
-            for (int i = 0; i < cstr_len(str); i += 1)
-            {
-              Pair_char_texture ct = get_char_texture(str[i]);
-              if (ct.has_texture) {
-                draw_rect(rect_make(x, y, ct.texture.width, ct.texture.height), C_RED);
-                test_draw_texture(ct.texture, x, y);
-                F32 gap = 0.0f;
-                x += ct.texture.width + gap;
+          ui_begin_build();
+          {
+            ui_begin_box(UI_SizePx(200), UI_SizeChildrenSum(), Axis2_y, C_WHITE, "Key 1");
+            { 
+              ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, C_RED, "Key Text");
+              {
+                
               }
+              ui_end_box();
+             
+              ui_begin_box(UI_SizePercentOfParent(1), UI_SizePx(50), Axis2_x, C_GREEN, "Key 2");
+              {
+                if (ui_is_clicked())
+                {
+                  printf("Key 2 \n");
+                }
+              }
+              ui_end_box();
+
+              ui_begin_box(UI_SizePercentOfParent(0.66), UI_SizePx(100), Axis2_x, C_BLUE, "Key 3");
+              {
+                if (ui_is_clicked())
+                {
+                  printf("Key 3 \n");
+                }
+              }
+              ui_end_box();
             }
-          };
-
-          // draw_rect(rect_make(100, 100, 100, 100), C_RED);
-          // draw_rect(rect_make(100, 100, 100, 100), vec4_f32(0, 0, 1, 0.5));
-
-          test_draw_text("Flopper.", 100, 100);
-
-          // draw_rect(rect_make(100, 100, 100, 100));
-
-          if (is_key_clicked(window, Key_a)) {
-            printf("Exit on a key. \n");
-            exit(1);
+            ui_end_box();
           }
+          ui_end_build();
+            
+          ui_draw_ui();
         }
-  
-      }
-    }
 
+
+
+          // test_draw_texture(g_text_layer_state->current_font_data->font_texture, 100, 100);
+
+          // Get a texture
+          // Align it to the baseline
+          // Render 
+
+          // auto test_draw_text = [](U8 ch , F32 baseline_x, F32 baseline_y) -> U32 {
+          //   F32 scale = stbtt_ScaleForPixelHeight(&font_info, 100);
+            
+          //   int ascent = {};
+          //   int descent = {};
+          //   int line_gap = {};
+          //   {
+          //     stbtt_GetFontVMetrics(&font_info, &ascent, &descent, &line_gap);
+          //     ascent *= scale;
+          //     descent *= scale;
+          //     line_gap *= scale;
+          //   }
+
+          //   int advance_width = {};
+          //   int lsb = {};
+          //   {
+          //     stbtt_GetCodepointHMetrics(&font_info, ch, &advance_width, &lsb);
+          //     advance_width *= scale;
+          //     lsb *= scale;
+          //   }
+
+          //   int x0 = {};
+          //   int x1 = {};
+          //   int y0 = {};
+          //   int y1 = {};
+          //   stbtt_GetCodepointBitmapBox(&font_info, ch, 
+          //                               scale, scale, 
+          //                               &x0,&y0,&x1,&y1);
+          //   // 1 14 -15 1
+          //   int bbox_width = x1 - x0;
+          //   int bbox_height = y1 - y0;
+            
+          //   // Finals
+          //   int f_x0 = baseline_x + x0;
+          //   int f_x1 = f_x0 + (x1 - x0);
+          //   int f_y0 = baseline_y + y0;
+          //   int f_y1 = f_y0 + (y1 - y0);
+
+          //   Pair_char_texture a_texture = get_char_texture(ch);
+          //   Assert(a_texture.has_texture);
+          //   draw_rect(rect_make(baseline_x, baseline_y - ascent, 1, baseline_y - descent), C_GREEN);
+          //   draw_rect(rect_make(baseline_x, baseline_y, 100, 1), C_RED);
+          //   draw_rect(rect_from_points(f_x0, f_y0, f_x1, f_y1), C_BLUE);
+          //   test_draw_texture(a_texture.texture, f_x0, f_y0);
+            
+          //   Assert(advance_width >= 0);
+          //   return advance_width;
+          // };
+
+          // // draw_rect(rect_make(100, 100, 100, 100), C_RED);
+          // // draw_rect(rect_make(100, 100, 100, 100), vec4_f32(0, 0, 1, 0.5));
+
+          // // test_draw_text("Flopper.", 100, 100);
+
+          // local U64 current_len = 0;
+          // local U64 dyn_str_len = 50;
+          // local U8* dyn_str = (U8*)malloc(dyn_str_len);
+          // auto push_on_text = [](char ch) {
+          //   if (current_len < dyn_str_len) {
+          //     dyn_str[current_len++] = ch;
+          //   }
+          // };
+
+          // if (is_key_clicked(window, Key_a))
+          // {
+          //   push_on_text('a');
+          // }
+          // if (is_key_clicked(window, Key_w))
+          // {
+          //   push_on_text('w');
+          // }
+           
+          // void draw_text(Str8 str, F32 x, F32 y, U32 font_size);
+          
+          // draw_text('a', 100, 100, )
+
+          // F32 baseline_x = 100;
+          // F32 baseline_y = 100; 
+          // ForEachEx(char_index, current_len, dyn_str)
+          // {
+          //   U8* ch = dyn_str + char_index;
+          //   U32 width_advance = test_draw_text(*ch, baseline_x, baseline_y);
+          //   baseline_x += width_advance;
+          // }
+
+          // if (is_key_clicked(window, Key_a)) {
+          //   printf("Exit on a key. \n");
+          //   exit(1);
+          // }
+      }
+  
+    }
   }
+
+}
 
   #define SCREEN_SHOT_DEMO 0
   #if SCREEN_SHOT_DEMO
@@ -182,8 +287,6 @@ int main()
   }
   #endif
 
-  return 0;
-}
 
 
 

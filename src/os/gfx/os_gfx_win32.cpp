@@ -144,6 +144,11 @@ Rect win32_get_screen_rect()
   return rect;
 }
 
+Event_list* os_frame_event_list_from_window(Win32_window* window)
+{
+  return window->frame_event_list;
+}
+
 LRESULT CALLBACK WndProc(HWND window_handle, UINT message, WPARAM w_param, LPARAM l_param)
 {
   U64 result = 0;
@@ -298,7 +303,7 @@ LRESULT CALLBACK WndProc(HWND window_handle, UINT message, WPARAM w_param, LPARA
         || message == WM_MBUTTONDOWN
         || message == WM_XBUTTONDOWN
       ) {
-        message_type = Message_type_up;
+        message_type = Message_type_down;
       }
 
       if (message == WM_MOUSEMOVE) {
@@ -337,7 +342,9 @@ LRESULT CALLBACK WndProc(HWND window_handle, UINT message, WPARAM w_param, LPARA
       event.type = Event_type_mouse;
       event.mouse_x = x;
       event.mouse_y = y;
-      event.mouse_key_released = mouse_key;
+      if (message_type == Message_type_up) { event.mouse_key_released = mouse_key; }
+      else if (message_type == Message_type_down) { event.mouse_key_pressed = mouse_key; }
+      else if (message_type == Message_type_move) {   };
       
       if (message_type == Message_type_up) {
         MemCopy(event.other_released_mouse_buttons, other_mouse_buttons, sizeof(other_mouse_buttons));

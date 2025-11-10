@@ -16,10 +16,12 @@ Data_buffer data_buffer_make(Arena* arena, U64 size);
 
 U64 cstr_len(const char* name);
 
+// Damian: These also temporarily null terminate
 Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len);
 Str8 str8_from_cstr(Arena* arena, const char* cstr);
 Str8 str8_from_str8(Arena* arena, Str8 str8);
 
+// TODO: Might have to remove these if they are of no use
 Str8 str8_from_cstr_len_temp_null_term(Arena* arena, const char* cstr, U64 len);
 Str8 str8_from_cstr_temp_null_term(Arena* arena, const char* cstr);
 Str8 str8_from_str8_temp_null_term(Arena* arena, Str8 str8);

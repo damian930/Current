@@ -21,8 +21,8 @@ enum Key_state {
 enum Key {
   Key_NONE,
   Key_w,
-  Key_a,
   Key_s,
+  Key_a,
   Key_d,
   Key_COUNT,
 };
@@ -134,6 +134,22 @@ B32 is_key_clicked(Win32_window* window, Key key)
     }    
   }
   return result;
+}
+
+U8 key_to_char(Key key)
+{
+  U8 ch = '\0';
+  switch (key)
+  {
+    default:        { InvalidCodePath("Handle all the keys."); } break;
+    case Key_NONE:  {} break;
+    case Key_w:     { ch = 'w'; } break;
+    case Key_s:     { ch = 's'; } break;
+    case Key_a:     { ch = 'a'; } break;
+    case Key_d:     { ch = 'd'; } break;
+    case Key_COUNT: {} break;
+  }
+  return ch;
 }
 
 // B32 is_key_down(Win32_window* window, Key key)

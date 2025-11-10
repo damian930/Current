@@ -6,13 +6,22 @@
 #include "base/arena.h"
 #include "os/core/os_core_win32.h"
 
-#include "third_party/stb/stb_truetype.h"
+#ifndef STB_TRUE_TYPE_H
+#define STB_TRUE_TYPE_H
+   #include "third_party/stb/stb_truetype.h"
+#endif
 
 struct Image2D {
-  U32 width;
-  U32 height;
-  U32 n_chanels;
-  Data_buffer data_buffer_opt;
+   U32 width;
+   U32 height;
+   U32 n_chanels;
+   // TODO: Remove this union from here,
+   //       its there cause i dont like the opt name, but dont want to deal with renaming now.
+   union {
+     Data_buffer data_buffer_opt;
+     Data_buffer data_buffer;
+   };
+// TODO: See if adding U32 offset_x/offset_y would be nice
 };
 
 Image2D load_png(Arena* arena, Str8 file_path, B32 do_flip_y);

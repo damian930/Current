@@ -52,48 +52,7 @@ Image2D load_png(Arena* arena, Str8 file_path, B32 do_flip_y)
   return image;
 }
 
-Image2D create_bitmap_for_char_rgba(Arena* arena, stbtt_fontinfo* font_info, U8 codepoint, U32 font_size)
-{
-  Image2D bitmap = {}; 
-  {
-    int w    = {};  
-    int h    = {};  
-    int xoff = {};  
-    int yoff = {};  
-    U8* stb_data = stbtt_GetCodepointBitmap(font_info, 0, stbtt_ScaleForPixelHeight(font_info, (F32)font_size), 
-                                            codepoint, &w, &h, &xoff, &yoff); 
 
-    U64 stb_data_size = w * h * 1; // Damian: stb only uses 1 byte per pixel in "stbtt_GetCodepointBitmap"
-    U64 my_data_size  = w * h * 4; // Damian: RGBA
-    Data_buffer my_data = data_buffer_make(arena, my_data_size);
-
-    U8* image_byte    = stb_data;
-    U32* bitmap_pixel = (U32*)my_data.data;
-
-    for (U32 image_y = 0; image_y < h; image_y += 1)
-    {
-      for (U32 image_x = 0; image_x < w; image_x += 1)
-      {
-        U32 byte = (U32)*image_byte;
-        image_byte += 1;
-        
-        *bitmap_pixel = ((byte << 24) |
-                        (byte << 16) |
-                        (byte << 8)  |
-                        (byte << 0)  );
-        bitmap_pixel += 1;
-      }
-    }
-    stbtt_FreeBitmap(stb_data, (void*)0); 
-    // TODO: All this malloc/free stuff might be removed if i suply my own arena alloc/release to stb 
-    
-    bitmap.width           = w;
-    bitmap.height          = h;
-    bitmap.n_chanels       = 4;
-    bitmap.data_buffer_opt = my_data;
-  }
-  return bitmap;
-}
 
 
 

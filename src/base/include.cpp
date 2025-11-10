@@ -3,5 +3,6 @@
 
 #include "arena.cpp"
 #include "string.cpp"
+#include "math.cpp"
 
 #endif
