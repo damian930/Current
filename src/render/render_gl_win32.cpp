@@ -444,7 +444,8 @@ void draw_rect(Rect rect, Color color)
 void test_draw_texture_pro(
   Texture2D texture, 
   Rect texture_source_rect,
-  Rect texture_dest_rect
+  Rect texture_dest_rect,
+  Color color
 ) {
   // Crop the texture, then just draw it
   Arena* frame_arena = g_win32_gl_renderer->frame_arena;
@@ -456,10 +457,20 @@ void test_draw_texture_pro(
   node->texture_source_rect = texture_source_rect;
   node->texture_dest_rect = texture_dest_rect;
 
-  // Crop the texture here and pass that data to the renderer shader stuff
-
   DllPushBack(list, node);
   list->count += 1;
+
+  draw_rect(texture_dest_rect, color);
+}
+
+void test_draw_texture_crop(
+  Texture2D texture, 
+  Rect source_rect, 
+  F32 screen_offset_x, F32 screen_offset_y, 
+  Color color
+) {
+  Rect dest_rect = rect_make(screen_offset_x, screen_offset_y, source_rect.width, source_rect.height);
+  test_draw_texture_pro(texture, source_rect, dest_rect, color);
 }
 
 // TODO: Uncomment this back
@@ -469,9 +480,69 @@ void test_draw_texture_pro(
   // test_draw_texture_pro(texture, texture_rect, x, y);
 // }
 
-void test_draw_text(const char* text, U32 font_size, F32 x, F32 y)
+// TODO: Move this 
+#include "text/text.h"
+
+void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32 x, F32 y)
 {
+  F32 baseline_y = y + font_info->ascent;
+  F32 x_offset = x;
   
+  ForEachEx(index, text.count, text.data)
+  {
+    U8 codepoint = text.data[index];
+    
+    Font_codepoint_data_node* data = font_get_codepoint_node_opt(font_info, codepoint);
+    if (data)
+    {
+      x_offset += data->left_side_bearing;
+      Rect codepoint_rect = codepoint_rect_from_data(font_info, data);
+      
+      Rect dest_rect = rect_make(x_offset, baseline_y - data->glyph_bbox_y1, codepoint_rect.width, codepoint_rect.height);
+      test_draw_texture_pro(font_texture, codepoint_rect, dest_rect, C_TRANSPARENT);
+      
+      x_offset += data->advance_width;
+      if (index < text.count - 1)
+      {
+        U8 next_codepoint = text.data[index + 1];
+        Font_kern_pair* kern_pair = font_get_kern_pair_opt(font_info, codepoint, next_codepoint);      
+        if (kern_pair)
+        {
+          x_offset += kern_pair->advance;
+          printf("Kern: %f \n", kern_pair->advance);
+        }
+      }
+    }
+    else 
+    {
+      x_offset += font_info->max_advance_width;
+    }
+    // data->
+  }
+  
+  // Damian: These were just some things to see if stuff was aligned well
+  // F32 font_max_height = font_info->ascent - font_info->descent;
+  // // The highest point for a line of text
+  // {
+  //   Rect line = rect_make(x, y, 500, 1);
+  //   draw_rect(line, C_GREEN);
+  // }
+  
+  // // Baseline
+  // {
+  //   Rect line = rect_make(x, baseline_y, 500, 1);
+  //   draw_rect(line, C_GREEN);
+  // }
+  
+  // // The lowest point for a line of text
+  // {
+  //   Rect line = rect_make(x, y + font_max_height, 500, 1);
+  //   draw_rect(line, C_GREEN);
+  // }
+  
+  // Rect complete_text_rect = rect_make(100, 100, 0, font_max_height);
+  // complete_text_rect.width = x_offset;
+  // draw_rect(complete_text_rect, vec4_f32(1.0f, 0, 0, 0.3));
 }
 
 void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
@@ -622,7 +693,7 @@ void gl_load_rect_program()
       StringLine("  float t_source_rect_scale_x_norm = t_source_rect_width / t_height;"),
       StringLine("  float t_source_rect_scale_y_norm = t_source_rect_height / t_height;"),
       
-      StringLine("  vec2 t_source_offset = vec2(t_source_offset_x, t_source_offset_y);"),
+      StringLine("  vec2 t_source_offset = vec2(t_source_offset_x_norm, t_source_offset_y_norm);"),
       StringLine("  vec2 t_source_scale_for_rect = vec2(t_source_rect_scale_x_norm, t_source_rect_scale_y_norm);"),
       StringLine("  TextureCoord = t_source_offset + t_source_scale_for_rect * aTexturePos;"),
       StringLine("  gl_Position = projection * translate *  scale * vec4(aPos.x, aPos.y, 0.0, 1.0);"),

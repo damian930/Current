@@ -116,13 +116,20 @@ int main()
       // Damian: Remove this to not worry about this for now
 
       Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
-      Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 100, Str8FromClit(font_arena, "../data/Roboto-Regular.ttf"));
+      #define FONT_PATH "../data/papyrus.ttf"
+      // #define FONT_PATH "../data/Roboto-Regular.ttf"
+      Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 100, Str8FromClit(font_arena, FONT_PATH));
 
-      for (Font_codepoint_data_node* node = font_info->hash_list->first; 
-           node != 0; 
-           node = node->next
-      ) {
-        printf("%c: (%d, %d), (%d, %d) \n", node->codepoint, node->codepoint_offset.x0, node->codepoint_offset.y0, node->codepoint_offset.x1, node->codepoint_offset.y1);
+      // for (Font_codepoint_data_node* node = font_info->hash_list->first; 
+      //      node != 0; 
+      //      node = node->next
+      // ) {
+      //   printf("%c: (%d, %d), (%d, %d) \n", node->codepoint, node->codepoint_offset.x0, node->codepoint_offset.y0, node->codepoint_offset.x1, node->codepoint_offset.y1);
+      // }
+
+      for (Font_kern_node* node = font_info->kern_list.first; node != 0; node = node->next)
+      {
+        printf("C1: %c, C2: %c, Add: %f \n", node->kern_pair.codepoint1, node->kern_pair.codepoint2, node->kern_pair.advance);
       }
 
       Texture2D font_texture = create_a_texture_from_font_atlas(font_info);
@@ -133,15 +140,8 @@ int main()
       {
         DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
         {
-          // Vec2_F32 test_scale = vec2_f32(2.0f, 2.0f);
-          // Vec2_F32 test_gl = vec2_f32(0.25, 0.5);
-          // Vec2_F32 test = test_scale * test_gl;
-          // DebugStopHere();
+          test_draw_text(font_info, font_texture, Str8FromClit(font_arena, "Flopper S[]"), 100, 100);
 
-          test_draw_texture_pro(font_texture, 
-            rect_make(0, 0, 500, 200), 
-            rect_make(50, 50, 800, 800));
-          
           ui_begin_build();
           {
             local B32 is_draw = false;

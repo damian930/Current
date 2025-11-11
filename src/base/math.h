@@ -12,7 +12,7 @@
 #define ValueToMin(value_to_min, possible_min) \
   do { if (value_to_min > possible_min) { value_to_min = possible_min; } } while(false);
 #define ValueToMax(value_to_max, possible_max) \
-  do { if (value_to_max > possible_max) { value_to_max = possible_max; } } while(false);
+  do { if (value_to_max < possible_max) { value_to_max = possible_max; } } while(false);
 
 #define ValueToMinWithAction(value, possible_min, callback) \
   do { if (value > possible_min) { value = possible_min; callback; } } while(false);
@@ -359,6 +359,12 @@ U32 range_u32_count(Range_U32 range)
 {
   U32 count = range.max - range.min;
   return count; 
+}
+
+U32 range_u32_within(Range_U32 range, U32 value)
+{
+  B32 result = (range.min <= value && value < range.max);
+  return result;
 }
 
 #endif

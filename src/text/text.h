@@ -30,9 +30,15 @@ struct Font_codepoint_data_node {
   Font_codepoint_data_node* prev;
   
   U8 codepoint;
-  F32 advance_width;
-  F32 left_side_bearing;
   Font_atlas_codepoint_offset codepoint_offset;
+
+  // Scaled up front
+  F32 advance_width;     
+  F32 left_side_bearing; 
+  F32 glyph_bbox_x0; // TODO: Make this a general struct for offsets in a BB
+  F32 glyph_bbox_y0;
+  F32 glyph_bbox_x1;
+  F32 glyph_bbox_y1;
 };
 
 struct Font_hash_list {
@@ -41,17 +47,38 @@ struct Font_hash_list {
   U32 node_count;
 };
 
+struct Font_kern_pair {
+  U8 codepoint1;
+  U8 codepoint2;
+  F32 advance;
+};
+
+struct Font_kern_node {
+  Font_kern_node* next;
+  Font_kern_node* prev;
+  Font_kern_pair kern_pair; // This is scaled up front
+};
+
+struct Font_kern_list {
+  Font_kern_node* first;
+  Font_kern_node* last;
+  U32 count;
+};
+
 struct Font_info {
   // Font hash entries
   Font_hash_list hash_list[1];
 
-  // Font data
+  Font_kern_list kern_list;
+
+  // Font data (All these are scaled up front)
   Image2D font_atlas;
   U32 font_size;
   F32 scale;
   F32 ascent;
   F32 descent;
   F32 line_gap;
+  F32 max_advance_width;
 };
 
 // Damian: Removed the ussual self contained layer from here, since not sure if need it yet
@@ -124,12 +151,36 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints, U32 font_size,
       result_font_info->line_gap = (F32)linegap * scale;
     }
 
-    // Codepoint specific data
+    // Codepoint specific dat
     ForEachRangeU32(it_codepoint, range_of_codepoints)
     {
-      int advance_width = {};
-      int left_side_bearing = {};
-      stbtt_GetCodepointHMetrics(&font_info, (int)it_codepoint, &advance_width, &left_side_bearing);
+      F32 advance_width = {};
+      F32 left_side_bearing = {};
+      {
+        int int_advance_width = {};
+        int int_left_side_bearing = {};
+        stbtt_GetCodepointHMetrics(&font_info, (int)it_codepoint, &int_advance_width, &int_left_side_bearing);
+        advance_width = scale * (F32)int_advance_width;
+        left_side_bearing = scale * (F32)left_side_bearing;
+      }
+      ValueToMax(result_font_info->max_advance_width, advance_width);
+
+      F32 glyph_bbox_x0 = {}; // TODO: Make this a general struct for offsets in a BB
+      F32 glyph_bbox_y0 = {};
+      F32 glyph_bbox_x1 = {};
+      F32 glyph_bbox_y1 = {};
+      {
+        int x0 = {};
+        int y0 = {};
+        int x1 = {};
+        int y1 = {};
+        int succ = stbtt_GetCodepointBox(&font_info, it_codepoint, &x0, &y0, &x1, &y1);
+        Assert(succ);
+        glyph_bbox_x0 = scale * (F32)x0;
+        glyph_bbox_y0 = scale * (F32)y0;
+        glyph_bbox_x1 = scale * (F32)x1;
+        glyph_bbox_y1 = scale * (F32)y1;
+      }
 
       // TODO: This has to be changed
       //       Left it this way, since we only have 100 characters for noe
@@ -148,8 +199,39 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints, U32 font_size,
                                                                 codepoint_pached_data->y0, 
                                                                 codepoint_pached_data->x1, 
                                                                 codepoint_pached_data->y1};
+      new_node->glyph_bbox_x0 = glyph_bbox_x0;
+      new_node->glyph_bbox_y0 = glyph_bbox_y0;
+      new_node->glyph_bbox_x1 = glyph_bbox_x1;
+      new_node->glyph_bbox_y1 = glyph_bbox_y1;
+
       DllPushBack(list, new_node);
       list->node_count += 1;
+    }
+
+    // Kerning table stuff 
+    {
+      int kern_entries_count = stbtt_GetKerningTableLength(&font_info);
+      stbtt_kerningentry* kern_entries = ArenaPushArr(scratch.arena, stbtt_kerningentry, kern_entries_count);
+      int entries_returned = stbtt_GetKerningTable(&font_info, kern_entries, kern_entries_count);
+      Assert(entries_returned == kern_entries_count);
+      
+      Font_kern_list* kern_list = &result_font_info->kern_list;
+      ForEachEx(kern_index, kern_entries_count, kern_entries)
+      {
+        stbtt_kerningentry* entry = kern_entries + kern_index;
+
+        if (   range_u32_within(range_of_codepoints, entry->glyph1)
+            && range_u32_within(range_of_codepoints, entry->glyph2)
+        ) {
+          Font_kern_node* new_node = ArenaPush(arena, Font_kern_node);
+          new_node->kern_pair.codepoint1 = entry->glyph1;
+          new_node->kern_pair.codepoint2 = entry->glyph2;
+          new_node->kern_pair.advance = scale * (F32)entry->advance;
+  
+          DllPushBack(kern_list, new_node);
+          kern_list->count += 1;
+        }
+      }
     }
 
     // // TODO: See if OS/2 ascent,descent... are needed
@@ -177,17 +259,58 @@ Font_codepoint_data_node* font_get_codepoint_node_opt(Font_info* font_info, U8 c
   return result;
 };
 
-F32 crop_codepoint_from_font_atlas_texture(Font_info* font_info, U8 codepoint)
+Font_kern_pair* font_get_kern_pair_opt(Font_info* font_info, U8 codepoint1, U8 codepoint2)
+{
+  Font_kern_pair* result = 0;
+  for (Font_kern_node* node = font_info->kern_list.first; node != 0; node = node->next)
+  {
+    if (   node->kern_pair.codepoint1 == codepoint1 
+        && node->kern_pair.codepoint2 == codepoint2
+    ) {
+      result = &node->kern_pair;
+      break;
+    }
+  }
+  return result;
+}
+
+Rect codepoint_rect_from_font(Font_info* font_info, U8 codepoint)
 {
   Font_codepoint_data_node* node = font_get_codepoint_node_opt(font_info, codepoint);
-  
-  
-  
-  node->codepoint_offset;
+  Rect source_rect = {};
+  source_rect.x = 0.0f;
+  source_rect.y = 0.0f;
+  source_rect.width = font_info->max_advance_width;
+  source_rect.height = font_info->ascent + Abs(F32, font_info->descent);
+  if (node) {
+    source_rect.x = node->codepoint_offset.x0;
+    source_rect.y = node->codepoint_offset.y0;
+    source_rect.width = node->codepoint_offset.x1 - node->codepoint_offset.x0;
+    source_rect.height = node->codepoint_offset.y1 - node->codepoint_offset.y0;
+  }
+  return source_rect;
+}
 
-  NotImplemented();
-
-  return 0;
+// TODO: I really dislike that nulls are possible here
+//       Maybe just have safe and unsafe versions ????
+Rect codepoint_rect_from_data(Font_info* font_info, Font_codepoint_data_node* node)
+{
+  Rect source_rect = {};
+  if (node) 
+  {
+    source_rect.x = node->codepoint_offset.x0;
+    source_rect.y = node->codepoint_offset.y0;
+    source_rect.width = node->codepoint_offset.x1 - node->codepoint_offset.x0;
+    source_rect.height = node->codepoint_offset.y1 - node->codepoint_offset.y0;
+  }
+  else 
+  {
+    source_rect.x = 0.0f;
+    source_rect.y = 0.0f;
+    source_rect.width = font_info->max_advance_width;
+    source_rect.height = font_info->ascent + Abs(F32, font_info->descent);
+  }
+  return source_rect;
 }
 
 ///////////////////////////////////////////////////////////
