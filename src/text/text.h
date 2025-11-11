@@ -313,6 +313,44 @@ Rect codepoint_rect_from_data(Font_info* font_info, Font_codepoint_data_node* no
   return source_rect;
 }
 
+// NOTE: Returning Vec2_F32 might have made more sense tho
+Vec2_F32 font_measure_text(Font_info* font_info, Str8 text)
+{
+  F32 result_width = 0.0f;
+  F32 result_height = font_info->ascent + Abs(F32, font_info->descent);
+
+  F32 top_line_y = font_info->ascent;
+  ForEachEx(index, text.count, text.data)
+  {
+    U8 codepoint = text.data[index];
+    
+    Font_codepoint_data_node* data = font_get_codepoint_node_opt(font_info, codepoint);
+    if (data)
+    {
+      result_width += data->left_side_bearing;
+      result_width += data->advance_width;
+      if (index < text.count - 1)
+      {
+        U8 next_codepoint = text.data[index + 1];
+        Font_kern_pair* kern_pair = font_get_kern_pair_opt(font_info, codepoint, next_codepoint);      
+        if (kern_pair)
+        {
+          result_width += kern_pair->advance;
+        }
+      }
+    }
+    else 
+    {
+      result_width += font_info->max_advance_width;
+    }
+  } 
+
+  Vec2_F32 result_dims = vec2_f32(result_width, result_height);
+  return result_dims;
+
+  // TODO: Add a new line handling here
+}
+
 ///////////////////////////////////////////////////////////
 // Damian: Helpers
 //

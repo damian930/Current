@@ -2,6 +2,7 @@
 #define D_UI_H
 
 #include "base/arena.h"
+#include "text/text.h"
 
 enum Axis2 {
   Axis2_x,
@@ -46,6 +47,12 @@ struct UI_child_gap_stack {
 
 // ======================
 
+enum UI_box_flags : U32 {
+  UI_box_flag__NONE          = (1 << 0),
+  UI_box_flag__has_backgound = (1 << 1),
+  UI_box_flag__has_text      = (1 << 2),
+};
+
 struct UI_Box {
   UI_Box* parent;
   UI_Box* first;
@@ -54,12 +61,15 @@ struct UI_Box {
   UI_Box* prev;
   U32 children_count;
 
+  // Nature of a box
   Str8 key;
-
   UI_size semantic_size[Axis2_COUNT];
   Axis2 alignment_axis;
-  Color color;
-  // Str8 text;
+
+  // Extra features
+  UI_box_flags flags;
+  Color backgound_color;
+  Str8 text;
 
   // Sizing pass data
   F32 computed_sizes[Axis2_COUNT];
@@ -74,6 +84,8 @@ struct UI_state {
   Arena* ui_tree_build_arenas[2];
 
   Win32_window* window;
+  Font_info* font_info;
+  Texture2D font_texture;
 
   UI_Box* root;
   UI_Box* current_parent; // NOTE: This name might be confusing, may have to change it 

@@ -88,12 +88,14 @@ F32 ui_current_child_gap()
 
 // ---
 
-void ui_state_init(Win32_window* window)
+void ui_state_init(Win32_window* window, Font_info* font_info)
 {
   Arena* arena = arena_alloc(Kilobytes_U64(20), "UI state arena");
   g_ui_state = ArenaPush(arena, UI_state);
   g_ui_state->perm_state_arena = arena;
   g_ui_state->window = window;
+  g_ui_state->font_info = font_info;
+  // g_ui_state->font_texture = font_texture;
 
   g_ui_state->current_arena_index = 0;
   g_ui_state->ui_tree_build_arenas[0] = arena_alloc(Kilobytes_U64(64), "UI tree build arena 1");
@@ -177,17 +179,30 @@ UI_Box* ui_allocate_box_helper(
   Arena* arena, 
   UI_size size_kind_x, 
   UI_size size_kind_y, 
-  Axis2 alignment_axis, 
-  Color color,
-  const char* key
-) {
-  UI_Box* box = ArenaPush(arena, UI_Box);;
+  Axis2 alignment_axis,
+  
+  const char* key,
 
+  UI_box_flags flags,
+  Color backgound_color,
+  const char* text
+) {
+  UI_Box* box = ArenaPush(arena, UI_Box);
+
+  box->key = str8_from_cstr(arena, key);
   box->semantic_size[Axis2_x] = size_kind_x;
   box->semantic_size[Axis2_y] = size_kind_y;
   box->alignment_axis = alignment_axis;
-  box->color = color;
-  box->key = str8_from_cstr(arena, key);
+
+  box->flags = flags;
+  if (flags & UI_box_flag__has_backgound)
+  {
+    box->backgound_color= backgound_color;
+  }
+  if (flags & UI_box_flag__has_text)
+  {
+    box->text = str8_from_cstr(arena, text);
+  }
 
   return box;
 }
@@ -202,11 +217,16 @@ void ui_begin_build()
   // TODO: I dont like this call here
   Rect ui_rect = *g_win32_gl_renderer->viewport_rect__top_left_to_bottom_right;
 
+  UI_box_flags root_flags = UI_box_flag__has_backgound;
   UI_Box* new_root = ui_allocate_box_helper(tree_arena, 
                                             UI_SizePx(ui_rect.width), 
                                             UI_SizePx(ui_rect.height), 
-                                            Axis2_x, C_TRANSPARENT, 
-                                            "ROOT_KEY_FOR_UI");
+                                            Axis2_x, 
+                                            "ROOT_KEY_FOR_UI",
+                                            root_flags,
+                                            C_TRANSPARENT,
+                                            ""
+                                            );
   g_ui_state->root = new_root;
   g_ui_state->current_parent = new_root;
 
@@ -229,12 +249,19 @@ UI_Box* ui_begin_box(
   UI_size size_kind_x, 
   UI_size size_kind_y, 
   Axis2 alignment_axis, 
+  const char* key,
+  UI_box_flags flags,
   Color color,
-  const char* key
+  const char* c_str
 ) {
   UI_Box* new_box = ui_allocate_box_helper(ui_current_build_arena(), 
-                                           size_kind_x, size_kind_y, 
-                                           alignment_axis, color, key);
+                                           size_kind_x, 
+                                           size_kind_y, 
+                                           alignment_axis, 
+                                           key,
+                                           flags,
+                                           color, 
+                                           c_str);
   DllPushBack(g_ui_state->current_parent, new_box);
   g_ui_state->current_parent->children_count += 1;
 
@@ -250,6 +277,141 @@ void ui_end_box()
 }
 
 // ---
+
+void ui_sizing_for_fixed_sized_elements(UI_Box* root, Axis2 axis)
+{
+  switch (root->semantic_size[axis].kind)
+  {
+    default: {
+      for (UI_Box* child = root->first; child != 0; child = child->next)
+      {
+        ui_sizing_for_fixed_sized_elements(child, axis);
+      }
+    } break;
+
+    case UI_size_kind_px:
+    {
+      root->computed_sizes[axis] = root->semantic_size[axis].value;
+      for (UI_Box* child = root->first; child != 0; child = child->next)
+      {
+        ui_sizing_for_fixed_sized_elements(child, axis);
+      }
+    } break;
+
+    case UI_size_kind_text:
+    {
+      Vec2_F32 dims = font_measure_text(g_ui_state->font_info, root->text);
+      root->computed_sizes[axis] = dims.value[axis];
+      for (UI_Box* child = root->first; child != 0; child = child->next)
+      {
+        ui_sizing_for_fixed_sized_elements(child, axis);
+      }
+    } break;
+  }
+
+}
+
+void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
+{
+  switch (root->semantic_size[axis].kind)
+  {
+    default: {
+      for (UI_Box* child = root->first; child != 0; child = child->next)
+      {
+        ui_sizing_for_child_dependant_elements(child, axis);
+      }
+    } break;
+
+    case UI_size_kind_children_sum:
+    {
+      if (root->alignment_axis == axis)
+      {
+        // This is breadth first 
+        F32 total_children_size = 0.0f;
+        for (UI_Box* child = root->first; child != 0; child = child->next)
+        {
+          if (child->semantic_size[axis].kind == UI_size_kind_percent_of_parent) 
+          {
+            // Damian: This is not nessesary, since the sice for it is 0 at this point, but i just want it to be clear what i am doing
+            continue;
+          }
+          ui_sizing_for_child_dependant_elements(child, axis);
+          total_children_size += child->computed_sizes[axis];
+        } 
+        if (root->children_count > 0)
+        {
+          total_children_size += ui_current_padding() * 2;
+          total_children_size += ui_current_child_gap() * (root->children_count - 1);
+        }
+        root->computed_sizes[axis] = total_children_size; 
+      }
+      else 
+      { 
+        F32 max_child_size = 0.0f;
+        for (UI_Box* child = root->first; child != 0; child = child->next)
+        {
+          ui_sizing_for_child_dependant_elements(child, axis);
+          max_child_size = Max(max_child_size, child->computed_sizes[axis]);
+        } 
+        root->computed_sizes[axis] = max_child_size;
+        if (root->children_count > 0)
+        {
+          root->computed_sizes[axis] += ui_current_padding() * 2;
+        }
+      }
+
+    } break;
+  }
+
+}
+
+void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
+{
+  switch (root->semantic_size[axis].kind)
+  {
+    default: {
+      for (UI_Box* child = root->first; child != 0; child = child->next)
+      {
+        ui_sizing_for_parent_dependant_elements(child, axis);
+      }
+    } break;
+
+    case UI_size_kind_percent_of_parent:
+    {
+      UI_Box* usable_parent = 0; 
+      for (UI_Box* test_parent = root->parent; test_parent != 0; test_parent = test_parent->parent)
+      {
+        if (test_parent->semantic_size[axis].kind != UI_size_kind_children_sum)
+        {
+          usable_parent = test_parent;
+          break;
+        }
+      }
+      Assert(usable_parent, "It has to at least stop at the root node of the ui tree.");
+
+      F32 parent_size = usable_parent->computed_sizes[axis];
+      parent_size -= ui_current_padding() * 2;
+
+      // TODO: Here now that i have a parent size, 
+      // i need to see weather my parent is sum children,
+      // and if it is, then i have to fill it in it
+      // Kindas like like stretch the parent of fit the parent 
+      // Also then it can be used as a spacer then i guess
+      // Spacer --> Just a transperent element that stretched to be whatever 
+
+      root->computed_sizes[axis] = parent_size * root->semantic_size[axis].value;
+
+      for (UI_Box* child = root->first; child != 0; child = child->next)
+      {
+        ui_sizing_for_parent_dependant_elements(child, axis);
+      }
+      
+    } break;
+  }
+}
+
+// --------
+
 
 void ui_sizing_pass(UI_Box* root, Axis2 axis)
 {
@@ -302,18 +464,37 @@ void ui_sizing_pass(UI_Box* root, Axis2 axis)
 
     case UI_size_kind_percent_of_parent:
     {
-      F32 parent_size = root->parent->computed_sizes[axis];
+      UI_Box* usable_parent = 0; 
+      for (UI_Box* test_parent = root->parent; test_parent != 0; test_parent = test_parent->parent)
+      {
+        if (test_parent->semantic_size[axis].kind != UI_size_kind_children_sum)
+        {
+          usable_parent = test_parent;
+          break;
+        }
+      }
+      Assert(usable_parent, "It has to at least stop at the root node of the ui tree.");
+
+      F32 parent_size = usable_parent->computed_sizes[axis];
       parent_size -= ui_current_padding() * 2;
       root->computed_sizes[axis] = parent_size * root->semantic_size[axis].value;
+
+      for (UI_Box* child = root->first; child != 0; child = child->next)
+      {
+        ui_sizing_pass(child, axis);
+      }  
     } break;
     
     case UI_size_kind_text:
     {
-      
-
-      // Calculate the text width and height
-      // Apply all the paddings and child gaps
-      // Set the sizes for the sizing pass
+      Vec2_F32 font_dims = font_measure_text(g_ui_state->font_info, root->text);
+      root->computed_sizes[axis] = font_dims.value[axis]; 
+      root->computed_sizes[axis] += ui_current_padding() * 2;
+    
+      // for (UI_Box* child = root->first; child != 0; child = child->next)
+      // {
+      //   ui_sizing_pass(child, axis);
+      // }  
     } break;  
   
   }
@@ -324,26 +505,24 @@ void ui_sizing_pass(UI_Box* root, Axis2 axis)
 
 void ui_layout_pass(UI_Box* root, Axis2 axis)
 {
-  // if (root->size_kind[axis] == UI_size_px)
-  // {
-    F32 root_relative_pos = ui_current_padding();
-    U32 child_index = 0;
-    for (UI_Box* child = root->first; child != 0; child = child->next)
+  F32 root_relative_pos = ui_current_padding();
+  U32 child_index = 0;
+  for (UI_Box* child = root->first; child != 0; child = child->next)
+  {
+    if (root->alignment_axis == axis)
     {
-      if (root->alignment_axis == axis)
-      {
-        child->computed_parent_rel_pos[axis] = root_relative_pos;
-        root_relative_pos += ui_current_child_gap();
-        root_relative_pos += child->computed_sizes[axis];
-      }
-      else
-      {
-        child->computed_parent_rel_pos[axis] = root_relative_pos;
-      }
-
-      ui_layout_pass(child, axis);
+      child->computed_parent_rel_pos[axis] = root_relative_pos;
+      root_relative_pos += child_index * ui_current_child_gap();
+      root_relative_pos += child->computed_sizes[axis];
     }
-  // }
+    else
+    {
+      child->computed_parent_rel_pos[axis] = root_relative_pos;
+      // root_relative_pos += 
+    }
+
+    ui_layout_pass(child, axis);
+  }
 }
 
 // ---
@@ -368,13 +547,37 @@ void ui_final_pos_pass(UI_Box* root)
 
   x_offset -= root->computed_parent_rel_pos[Axis2_x];
   y_offset -= root->computed_parent_rel_pos[Axis2_y];
+
+  root->computed_final_rect.width += ui_current_padding();
+  root->computed_final_rect.height += ui_current_padding();
 } 
 
 // ---
 
 void ui_draw_ui_helper(UI_Box* root)
 { 
-  draw_rect(root->computed_final_rect, root->color);
+  // Activate different codepath based on the flags set on the box
+
+  if (root->flags & UI_box_flag__has_backgound)
+  {
+    draw_rect(root->computed_final_rect, root->backgound_color);
+  }
+  
+  if (root->flags & UI_box_flag__has_text)
+  {
+    test_draw_text(
+      g_ui_state->font_info, 
+      g_ui_state->font_texture, 
+      root->text, 
+      root->computed_final_rect.x + ui_current_padding(), 
+      root->computed_final_rect.y + ui_current_padding());
+    test_draw_text_lines(
+      g_ui_state->font_info, 
+      g_ui_state->font_texture, 
+      root->text, 
+      root->computed_final_rect.x + ui_current_padding(), 
+      root->computed_final_rect.y + ui_current_padding());
+  }
 
   for (UI_Box* box = root->first; box !=0; box = box->next)
   {
@@ -387,16 +590,28 @@ void ui_draw_ui_helper(UI_Box* root)
 
 void ui_draw_ui()
 {
-  ui_sizing_pass(g_ui_state->root, Axis2_x);
-  ui_sizing_pass(g_ui_state->root, Axis2_y);
+  ui_sizing_for_fixed_sized_elements(g_ui_state->root, Axis2_x);
+  ui_sizing_for_fixed_sized_elements(g_ui_state->root, Axis2_y);
+
+  ui_sizing_for_child_dependant_elements(g_ui_state->root, Axis2_x);
+  ui_sizing_for_child_dependant_elements(g_ui_state->root, Axis2_y);
+
+  ui_sizing_for_parent_dependant_elements(g_ui_state->root, Axis2_x);
+  ui_sizing_for_parent_dependant_elements(g_ui_state->root, Axis2_y);
+
   ui_layout_pass(g_ui_state->root, Axis2_x);
   ui_layout_pass(g_ui_state->root, Axis2_y);
+  
   ui_final_pos_pass(g_ui_state->root);
+  
   ui_draw_ui_helper(g_ui_state->root);
 }
 
-
-
+// TODO: This is temp
+void ui_equip_font_texture(Texture2D font_texture)
+{
+  g_ui_state->font_texture = font_texture;
+}
 
 
 

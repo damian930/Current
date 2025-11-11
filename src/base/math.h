@@ -21,8 +21,15 @@
 #define Square(x) ((x) * (x))
 
 struct Vec2_F32 {
-  F32 x;
-  F32 y;
+  union {
+    struct {
+      F32 x;
+      F32 y;
+    };
+    struct {
+      F32 value[2]; // Maybe changing this to v2 would be nicer
+    };
+  };
 };
 
 struct Vec2_S32 {
@@ -153,8 +160,8 @@ Rect rect_from_min_point(F32 x, F32 y, F32 width, F32 height)
   Rect result = {};
   result.x = x;
   result.y = y;
-  result.width     = width;
-  result.height    = height;
+  result.width  = width;
+  result.height = height;
   return result;
 }
 
@@ -194,6 +201,14 @@ Rect rect_from_points_vec(Vec2_F32 p1, Vec2_F32 p2)
 {
   Rect rect = rect_from_points(p1.x, p1.y, p2.x, p2.y);
   return rect;
+}
+
+Vec2_F32 rect_dims(Rect rect)
+{
+  Vec2_F32 result = {};
+  result.x = rect.width; 
+  result.y = rect.height;
+  return result;
 }
 
 B32 rect_does_intersect_with_point(Rect rect, Vec2_F32 p)
@@ -307,7 +322,7 @@ Mat4x4_F32 mat4x4_f32_translate(F32 x, F32 y, F32 z)
 // Common colors
 #define C_ORANGE      vec4_f32(1.0f, 0.647f, 0.0f, 1.0f)
 #define C_PURPLE      vec4_f32(0.502f, 0.0f, 0.502f, 1.0f)
-#define C_PINK        vec4_f32(1.0f, 0.753f, 0.796f, 1.0f)
+#define C_PINK        vec4_f32(0.737f, 0.580f, 0.733f, 1.0f)
 #define C_BROWN       vec4_f32(0.6f, 0.4f, 0.2f, 1.0f)
 #define C_GRAY        vec4_f32(0.502f, 0.502f, 0.502f, 1.0f)
 #define C_GREY        vec4_f32(0.502f, 0.502f, 0.502f, 1.0f)
@@ -364,6 +379,21 @@ U32 range_u32_count(Range_U32 range)
 U32 range_u32_within(Range_U32 range, U32 value)
 {
   B32 result = (range.min <= value && value < range.max);
+  return result;
+}
+
+// TODO: This has to be moved
+Vec4_F32 vec4_f32(F32 r, F32 g, F32 b, F32 a);
+Color color_make(F32 r, F32 g, F32 b, F32 a)
+{
+  Color color = vec4_f32(r, g, b, a);
+  return color;
+}
+
+Color color_set_a(Color color, F32 new_a)
+{
+  Color result = color;
+  result.a = new_a;
   return result;
 }
 

@@ -44,10 +44,10 @@ typedef S64 B64;
 #define ForEnum_Name(it_name, Enum_name, enum_last_value_name) for (U64 it_name = (Enum_name)0; it_name < enum_last_value_name; it_name += 1)
 #define ForEachEnum(it_name, Enum_name)  ForEnum_Name(it_name, Enum_name, Enum_name##_COUNT)
 
-#define Assert(expr) do {} while(false) 
+#define Assert(expr, ...) do {} while(false) 
 #if DEBUG_MODE 
 	#undef Assert
-	#define Assert(expr) do { if (!(expr)) {*((int*)0) = 69;} } while(false)
+	#define Assert(expr, ...) do { if (!(expr)) {*((int*)0) = 69;} } while(false)
 #endif
 #define AssertNote(expr, ...) Assert(expr);
 

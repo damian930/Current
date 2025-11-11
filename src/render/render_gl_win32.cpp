@@ -422,6 +422,7 @@ void r_gl_debug_message_callback(GLenum source, GLenum type, GLuint id,
 ) {
   printf("GL error: \n");
   printf("%s \n", message);
+  printf("\n");
 }
 
 ///////////////////////////////////////////////////////////
@@ -485,6 +486,7 @@ void test_draw_texture_crop(
 
 void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32 x, F32 y)
 {
+  // TODO: Rename this baseline_y to something like "top-font-line", cause its not a baseline YET.
   F32 baseline_y = y + font_info->ascent;
   F32 x_offset = x;
   
@@ -509,7 +511,6 @@ void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32
         if (kern_pair)
         {
           x_offset += kern_pair->advance;
-          printf("Kern: %f \n", kern_pair->advance);
         }
       }
     }
@@ -517,32 +518,37 @@ void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32
     {
       x_offset += font_info->max_advance_width;
     }
-    // data->
+  }
+
+}
+
+void test_draw_text_lines(Font_info* font_info, Texture2D font_texture, Str8 text, F32 x, F32 y)
+{
+  F32 font_max_height = font_info->ascent - font_info->descent;
+  
+  // The highest point for a line of text
+  {
+    Rect line = rect_make(x, y, 500, 1);
+    draw_rect(line, C_GREEN);
+  }
+
+  // Baseline
+  {
+    Rect line = rect_make(x, y + font_info->ascent, 500, 1);
+    draw_rect(line, C_GREEN);
   }
   
-  // Damian: These were just some things to see if stuff was aligned well
-  // F32 font_max_height = font_info->ascent - font_info->descent;
-  // // The highest point for a line of text
-  // {
-  //   Rect line = rect_make(x, y, 500, 1);
-  //   draw_rect(line, C_GREEN);
-  // }
+  // The lowest point for a line of text
+  {
+    Rect line = rect_make(x, y + font_max_height, 500, 1);
+    draw_rect(line, C_GREEN);
+  }
   
-  // // Baseline
-  // {
-  //   Rect line = rect_make(x, baseline_y, 500, 1);
-  //   draw_rect(line, C_GREEN);
-  // }
-  
-  // // The lowest point for a line of text
-  // {
-  //   Rect line = rect_make(x, y + font_max_height, 500, 1);
-  //   draw_rect(line, C_GREEN);
-  // }
-  
-  // Rect complete_text_rect = rect_make(100, 100, 0, font_max_height);
-  // complete_text_rect.width = x_offset;
-  // draw_rect(complete_text_rect, vec4_f32(1.0f, 0, 0, 0.3));
+  Vec2_F32 font_dims = font_measure_text(font_info, text);
+  Rect complete_text_rect = rect_make(x, y, 0, font_max_height);
+  complete_text_rect.width = font_dims.x;
+  Assert((U32)font_max_height == (U32)font_dims.y, "Just making sure i understand the ttf here correctly.");
+  draw_rect(complete_text_rect, vec4_f32(1.0f, 0, 0, 0.3));
 }
 
 void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
