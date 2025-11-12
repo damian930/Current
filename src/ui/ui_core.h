@@ -53,10 +53,12 @@ struct UI_Box {
 
   // Extra features
   UI_box_flags flags;
+  Str8 text;
   Color backgound_color;
   Color padding_color;
   Color child_gap_color;
-  Str8 text;
+  // F32 padding;
+  // F32 child_gap;
 
   B32 has_min_size[Axis2_COUNT];
   B32 has_max_size[Axis2_COUNT];

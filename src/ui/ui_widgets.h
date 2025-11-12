@@ -40,6 +40,18 @@ void ui_checkbox_entry(B32* b, U32* value, U32 value_on_pick, const char* text, 
   ui_end_box();
 }
 
+void ui_spacer()
+{
+  ui_begin_box(UI_SizeFitTheParent(), UI_SizeChildrenSum(), Axis2_x, 
+              "Fit 1", UI_box_flag__NONE, C_LIGHT_GREEN, "");
+  ui_end_box();
+}
+
+#define ui_h_stack(key) DefereLoop(ui_begin_box(UI_SizeFitTheParent(), UI_SizeChildrenSum(), \
+                                                Axis2_x, \
+                                                key, UI_box_flag__NONE, C_TRANSPARENT, ""), \
+                                   ui_end_box())
+
 
 
 

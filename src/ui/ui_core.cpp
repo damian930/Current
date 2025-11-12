@@ -625,6 +625,13 @@ void ui_set_max_size(F32 size, Axis2 axis)
   box->has_max_size[axis] = true;
 }
 
+void ui_set_backgound_color(Color color)
+{
+  UI_Box* box = g_ui_state->current_parent;
+  box->flags = (UI_box_flags)(box->flags | UI_box_flag__has_backgound);
+  box->backgound_color = color; 
+}
+
 
 
 

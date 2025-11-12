@@ -150,21 +150,33 @@ int main()
           // test_draw_text(font_info, font_texture, Str8FromClit(font_arena, "Flopper S[]"), 0, 0);
           // draw_rect(rect, color_make(1.0f, 0, 0, 0.3));
 
-          local B32 is_draw = false;
+          // local B32 is_draw = false;
+
           ui_begin_build();
           {
-            local B32 b_s[3] = {};
-            local Color color_arr[3] = {C_LIGHT_GREEN, C_PURPLE, C_BROWN};
-            local U32 color_index = 0;
-            ui_checkbox_entry(&b_s[0], &color_index, 0, "Entry 1", "Entry key 1");
-            ui_checkbox_entry(&b_s[1], &color_index, 1, "Entry 2", "Entry key 2");
-            ui_checkbox_entry(&b_s[2], &color_index, 2, "Entry 3", "Entry key 3");
- 
-            if (ui_button(color_arr[color_index], "Button", "Button key", "Label key"))
+            
+            ui_h_stack("H stack id")
             {
-              Color color = color_arr[color_index];
-              printf("Color: (%d, %d, %d) \n", (U32)(color.r * 255), (U32)(color.g * 255), (U32)(color.b * 255));
+              ui_set_backgound_color(C_LIGHT_GREEN);
+              ui_label("Telegram", "Telegram label id");
+              ui_spacer();
+              ui_label("2:55", "Time id");
+
             }
+
+
+          //   local B32 b_s[3] = {};
+          //   local Color color_arr[3] = {C_LIGHT_GREEN, C_PURPLE, C_BROWN};
+          //   local U32 color_index = 0;
+          //   ui_checkbox_entry(&b_s[0], &color_index, 0, "Entry 1", "Entry key 1");
+          //   ui_checkbox_entry(&b_s[1], &color_index, 1, "Entry 2", "Entry key 2");
+          //   ui_checkbox_entry(&b_s[2], &color_index, 2, "Entry 3", "Entry key 3");
+ 
+          //   if (ui_button(color_arr[color_index], "Button", "Button key", "Label key"))
+          //   {
+          //     Color color = color_arr[color_index];
+          //     printf("Color: (%d, %d, %d) \n", (U32)(color.r * 255), (U32)(color.g * 255), (U32)(color.b * 255));
+          //   }
 
 
 
