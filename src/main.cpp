@@ -171,6 +171,8 @@ int main()
                 }
                 ui_end_box();
 
+                // ui_spacer();
+
                 ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "B3 text", UI_box_flag__has_text, Color{}, "Paste");
                 {
                   if (ui_is_clicked()) { 

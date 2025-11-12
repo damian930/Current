@@ -23,7 +23,6 @@ struct UI_size {
   F32 value;
 };
 
-
 enum UI_box_flags : U32 {
   UI_box_flag__NONE            = (1 << 0),
   UI_box_flag__has_backgound   = (1 << 1),
@@ -128,25 +127,33 @@ void ui_draw_child_gap_color(Color gap_color);
 
 ///////////////////////////////////////////////////////////
 // Damian: TODO stuff
-//
-// [] Figure out a place where to calculate padding 
-// [x] Padding coloring
-// [x] Chlld gap coloring
-// [] Border     
-// [] Border coloring
-// [] Element that fits the parent
-//    [] NOTE 1*
-// =======================================================
-// NOTE*: 
-//  Test elements that are fit parent, they would be parent dependant,
-//  therefore calculated before child_sum elements. This means why wont extend att all. 
-//  Maybe a nice behaviour for it would be to have then fit the parent, so if parent is in px,
-//  then this elements just stretched to its max possible size to then fully use up the parent space.
-//  This wont do anything for child sum, so maybe then, child sum shoud be ignored in this case.
-//  So if fit parent is used inside child sum, it will be promoted to the nearest parent who is now child_sum,
-//  then we get the fitting size from that element, and since all its children until the fit elements 
-//  are child_sum kinds, those can be extended. So we kinda just go over the childsum and fit the first
-//  "fittable" parent (the one whos size is not child depandant)
+/*
+[] Figure out a place where to calculate padding 
+[x] Padding coloring
+[x] Chlld gap coloring
+[] Border     
+[] Border coloring
+[] Element that fits the parent
+   [] NOTE 1*
+=======================================================
+NOTE*: 
+  I am now implementing a fit the parent idea. I decided it to be a separate size kind from % of parent.
+  This makes sense since % of parent is still a px size (kind of) and if is also specified up front by the builder code for the ui.
+  The fit aspect of an element like spacer is only calculated after all the other sizes are done to somply fill in the space.
+  This is kinda weird to have a separate type for only spacers (i cant thing of other placer where i would need it), but
+  i dont want to have some weird flags on % of parent than then tell the core code to delay the sizing.
+  I am going to have a separate type for this, and if it doesnt work or can be simplifies, then great.
+  Idea is the following:
+    - We do the static sizing for text and px.
+    - We do the children sum 
+    - Then we go the % of parent (we get the parent of parent of our parent of child_sum kind sized element)
+    - Now we have all the sizes, so we size all the fit the parent elements.
+      This step will work with fit_kind, %_of_parent kind and child_sum_kind element.
+      The % of parent will extend the child_sum_elements. 
+      The fit will also get the parent of parent (the first hardcoded size), get all the space left, fill it in.
+      If the parent of the fit element is child_sum, then this child_sum will have to be extended with the new filler size.
+      Therefore in the end, we end up with a flex box kind of thing i guess.
+ */
 
 
 #endif
