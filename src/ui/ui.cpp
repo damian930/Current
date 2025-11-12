@@ -161,7 +161,7 @@ void ui_begin_build()
   arena_clear(tree_arena);
 
   // TODO: I dont like this call here
-  Rect ui_rect = *g_win32_gl_renderer->viewport_rect__top_left_to_bottom_right;
+  Rect ui_rect = win32_get_client_area_rect(g_ui_state->window);
 
   UI_box_flags root_flags = UI_box_flag__has_backgound;
   UI_Box* new_root = ui_allocate_box_helper(tree_arena, 
@@ -390,15 +390,18 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
       F32 space_taken = 0.0f;
       for (UI_Box* child = usable_parent->first; child != 0; child = child->next)
       {
-        space_taken += child->computed_sizes[axis]; 
+        if (usable_parent->alignment_axis == axis)
+        {
+          space_taken += child->computed_sizes[axis]; 
+        }
+      }
+      space_taken += 2 * ui_current_padding();
+      if (usable_parent->children_count > 0)
+      {
+        // TODO: This also has to be done only on the aligning axis
+        space_taken += (usable_parent->children_count - 1) * ui_current_child_gap();
       }
       F32 space_left_to_fill = total_space - space_taken;
-      space_left_to_fill -= 2 * ui_current_padding();
-      // TODO: accound for child gapping
-      // if (root->parent->children_count > 1) // Accounf for child gapping, the most emidiate parent gaps are used
-      // {
-      //   space_left_to_fill -= (root->parent->children_count - 1) * ui_current_child_gap(); 
-      // }
 
       // Extend current element
       root->computed_sizes[axis] = space_left_to_fill;
@@ -406,35 +409,14 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
       // Handle non aligning axis (the aligning axis is already expecting the padding and gap for this child)
       // TODO:       
 
-      // Extend the immediate parent if its child sum 
+      // Extend the immediate parent if its child sum
+      Assert(root->parent->semantic_size[axis].kind == UI_size_kind_children_sum); 
+      ui_sizing_helper__calculate_child_sum_element_size(root->parent, axis);
+
       if (root->parent->semantic_size[axis].kind == UI_size_kind_fit_the_parent) 
       {
         NotImplemented();
       } 
-
-      // ---
-      // TODO: This is copied from the child_sum handling of this,
-      //       guess this mean i have to make a func out of this 
-      //       or just unify this is some way
-      if (root->parent->semantic_size[axis].kind == UI_size_kind_children_sum)
-      {
-        UI_Box* child_sum_parent = root->parent;
-        if (child_sum_parent->alignment_axis == axis)
-        {
-          child_sum_parent->computed_sizes[axis] += root->computed_sizes[axis]; 
-        }
-        else 
-        {
-          // We extend the vertical
-          if (child_sum_parent->computed_sizes[axis] < root->computed_sizes[axis])
-          {
-            child_sum_parent->computed_sizes[axis] = root->computed_sizes[axis];
-            child_sum_parent->computed_sizes[axis] += 2 * ui_current_padding();
-          }
-        }
-        // Damian: padding and gap are already acounted for in the child_sum_parent sizing call 
-      }
-      // ---
 
     } break;
   }

@@ -151,19 +151,19 @@ int main()
           local B32 is_draw = false;
           ui_begin_build();
           {
-            ui_push_padding(10);
+            ui_push_padding(0);
             ui_push_child_gap(0);
             ui_draw_child_gap_color(C_WHITE);
             ui_draw_padding_for_current(C_GREY);
 
-            ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Clay like box", UI_box_flag__has_backgound, C_GREY, Null);
+            ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Clay like box", UI_box_flag__has_backgound, C_CYAN, Null);
             {
               ui_draw_child_gap_color(C_WHITE);
               ui_draw_padding_for_current(C_BLUE);
 
-              // ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_y, "Text 1", UI_box_flag__has_text, C_LIGHT_GREEN, "Text 1");
-              // {}
-              // ui_end_box();
+              ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_y, "Text 1", UI_box_flag__has_text, C_LIGHT_GREEN, "Text 1");
+              {}
+              ui_end_box();
 
               // ui_begin_box(UI_SizePercentOfParent(1.0f), UI_SizePercentOfParent(1.0f), Axis2_y, "FILL PARENT TEST", UI_box_flag__has_backgound, C_LIGHT_GREEN, Null);
               // {}
@@ -173,9 +173,9 @@ int main()
               {}
               ui_end_box();
 
-              // ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_y, "Text 2", UI_box_flag__has_text, C_LIGHT_GREEN, "Text 2");
-              // {}
-              // ui_end_box();
+              ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_y, "Text 2", UI_box_flag__has_text, C_LIGHT_GREEN, "Text 2");
+              {}
+              ui_end_box();
             }
             ui_end_box();
 
@@ -214,6 +214,8 @@ int main()
           ui_end_build();
           
           ui_draw_ui();
+
+          draw_rect(rect_make(0, 0, 3, 52), C_RED);
 
         }
       }
