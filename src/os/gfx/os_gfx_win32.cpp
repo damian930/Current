@@ -165,6 +165,7 @@ LRESULT CALLBACK WndProc(HWND window_handle, UINT message, WPARAM w_param, LPARA
     {
       PAINTSTRUCT ps;
       HDC hdc = BeginPaint(window_handle, &ps);
+      // Custom draw here
       EndPaint(window_handle, &ps);
     } break;
 

@@ -407,6 +407,7 @@ Color color_set_a(Color color, F32 new_a)
   return result;
 }
 
+
 #endif
 
 

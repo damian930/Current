@@ -16,8 +16,10 @@
 #include "other/image_stuff/image_loader.h"
 #include "other/image_stuff/image_loader.cpp"
 
-#include "ui/ui.h"
-#include "ui/ui.cpp"
+#include "ui/ui_core.h"
+#include "ui/ui_core.cpp"
+
+#include "ui/ui_widgets.h"
 
 // CreateCustonWindowDrawF(window_frame_draw_f) {
 //   DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
@@ -151,71 +153,50 @@ int main()
           local B32 is_draw = false;
           ui_begin_build();
           {
-            ui_push_padding(0);
-            ui_push_child_gap(0);
-            ui_draw_child_gap_color(C_WHITE);
-            ui_draw_padding_for_current(C_GREY);
-
-            ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Clay like box", UI_box_flag__has_backgound, C_CYAN, Null);
+            if (ui_button(C_LIGHT_GREEN, "button", "Label_key", "button key"))
             {
-              ui_draw_child_gap_color(C_WHITE);
-              ui_draw_padding_for_current(C_BLUE);
-
-              ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_y, "Text 1", UI_box_flag__has_text, C_LIGHT_GREEN, "Text 1");
-              {}
-              ui_end_box();
-
-              // ui_begin_box(UI_SizePercentOfParent(1.0f), UI_SizePercentOfParent(1.0f), Axis2_y, "FILL PARENT TEST", UI_box_flag__has_backgound, C_LIGHT_GREEN, Null);
-              // {}
-              // ui_end_box();
-
-              ui_begin_box(UI_SizeFitTheParent(), UI_SizeFitTheParent(), Axis2_y, "FILL PARENT TEST", UI_box_flag__has_backgound, C_LIGHT_GREEN, Null);
-              {}
-              ui_end_box();
-
-              ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_y, "Text 2", UI_box_flag__has_text, C_LIGHT_GREEN, "Text 2");
-              {}
-              ui_end_box();
+              printf("Pressed \n");
             }
-            ui_end_box();
 
 
-            // ui_push_padding(30);
-            // ui_push_child_gap(10);
+            // ui_push_padding(0);
+            // ui_push_child_gap(0);
+            // // ui_draw_child_gap_color(C_WHITE);
+            // // ui_draw_padding_for_current(C_GREY);
 
-            // ui_begin_box(UI_SizePx(1000), UI_SizeChildrenSum(), Axis2_y, "Clay like box", UI_box_flag__has_backgound, C_YELLOW, Null);
+            // ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_y, "Clay like box", UI_box_flag__has_backgound, C_ORANGE, "");
             // {
-            //   ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "TEST %", UI_box_flag__has_backgound, C_BLUE, "");
+            //   ui_set_min_size(400, Axis2_x);
+            //   ui_set_max_size(800, Axis2_x);
+
+            //   // ui_begin_box(UI_SizeFitTheParent(), UI_SizePx(10), Axis2_x, "Fit 1", UI_box_flag__has_backgound, C_LIGHT_GREEN, "");
+            //   // {}
+            //   // ui_end_box();
+
+            //   ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Row 1", UI_box_flag__has_backgound, C_PINK, "");
             //   {
-            //     ui_draw_padding_for_current(C_PINK);
-            //     ui_draw_child_gap_color(C_WHITE);
+            //     // ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "Tect for row 1 1", UI_box_flag__has_text, C_TRANSPARENT, "Copy");
+            //     // {}
+            //     // ui_end_box();
 
-            //     ui_begin_box(UI_SizePercentOfParent(0.1f), UI_SizePx(50), Axis2_x, "TEST %fasdfa", UI_box_flag__has_backgound, C_LIGHT_GREEN, "");
-            //     {
-            //     }
-            //     ui_end_box();
-
-            //     ui_begin_box(UI_SizePercentOfParent(0.1f), UI_SizePercentOfParent(0.2f), Axis2_x, "TEST %rwerwe", UI_box_flag__has_backgound, C_BETTER_RED, "");
-            //     {
-            //     }
-            //     ui_end_box();
-
-            //     ui_begin_box(UI_SizePercentOfParent(0.1f), UI_SizePx(50), Axis2_x, "TEST %dfgdfgdf", UI_box_flag__has_backgound, C_BROWN, "");
-            //     {
-            //     }
-            //     ui_end_box();
-
-            //     ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_y, "TEST %afsdfasdfs", UI_box_flags(UI_box_flag__has_backgound|UI_box_flag__has_text), C_MAROON, "TEST");
+            //     ui_begin_box(UI_SizeFitTheParent(),UI_SizeFitTheParent(), Axis2_x, "Fit 1", UI_box_flag__NONE, C_LIGHT_GREEN, "");
             //     {}
             //     ui_end_box();
-            //   }              
+                
+            //     // ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "Tect for row 1 2", UI_box_flag__has_text, C_TRANSPARENT, "IMAGE");
+            //     // {}
+            //     // ui_end_box();  
+            //   }
             //   ui_end_box();
+              
+            // }
+            // ui_end_box();
+
+
           }
           ui_end_build();
           
           ui_draw_ui();
-
-          draw_rect(rect_make(0, 0, 3, 52), C_RED);
 
         }
       }
