@@ -277,9 +277,12 @@ void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
         {
           if (child->semantic_size[axis].kind == UI_size_kind_percent_of_parent) 
           {
-            // Not allowing this for now
-            Assert(false); 
-            continue;
+            // Damian: This is here just to show (in code) that there is a special case 
+            //         when UI_size_kind_percent_of_parent is a child of UI_size_kind_children_sum  
+            //         We still acound for it beeing a child (add padding and gap), 
+            //         but the size itself is to be computed and adder to this element in the 
+            //         "ui_sizing_for_parent_dependant_elements" call 
+            Assert(child->computed_sizes[axis] == 0.0f);
           }
           ui_sizing_for_child_dependant_elements(child, axis);
           total_children_size += child->computed_sizes[axis];
@@ -298,6 +301,7 @@ void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
         F32 max_child_size = 0.0f;
         for (UI_Box* child = root->first; child != 0; child = child->next)
         {
+          // Damian: Here is the same special case as in the main if stmt
           ui_sizing_for_child_dependant_elements(child, axis);
           max_child_size = Max(max_child_size, child->computed_sizes[axis]);
         } 
@@ -317,46 +321,138 @@ void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
 
 void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
 {
-  if (root->semantic_size[axis].kind == UI_size_kind_percent_of_parent)
+  switch (root->semantic_size[axis].kind)
   {
-    // This is desabled for now
-    Assert(false);
-
-    UI_Box* usable_parent = 0; 
-    for (UI_Box* test_parent = root->parent; test_parent != 0; test_parent = test_parent->parent)
-    {
-      if (test_parent->semantic_size[axis].kind != UI_size_kind_children_sum)
+    default: {
+      for (UI_Box* child = root->first; child != 0; child = child->next)
       {
-        usable_parent = test_parent;
-        break;
+        ui_sizing_for_parent_dependant_elements(child, axis);
       }
-    }
-    Assert(usable_parent, "It has to at least stop at the root node of the ui tree.");
+    } break;
 
-    F32 parent_size = usable_parent->computed_sizes[axis];
-    parent_size -= ui_current_padding() * 2;
-
-    // TODO: Here now that i have a parent size, 
-    // i need to see weather my parent is sum children,
-    // and if it is, then i have to fill it in it
-    // Kindas like like stretch the parent of fit the parent 
-    // Also then it can be used as a spacer then i guess
-    // Spacer --> Just a transperent element that stretched to be whatever 
-
-    root->computed_sizes[axis] = parent_size * root->semantic_size[axis].value;
-
-    for (UI_Box* child = root->first; child != 0; child = child->next)
+    case UI_size_kind_percent_of_parent:
     {
-      ui_sizing_for_parent_dependant_elements(child, axis);
-    }
-  } // kind == UI_size_kind_%_of_parent
-  else  
-  {
-    for (UI_Box* child = root->first; child != 0; child = child->next)
+      UI_Box* usable_parent = 0;
+      for (UI_Box* test_parent = root->parent; test_parent != 0; test_parent = test_parent->parent)
+      {
+        if (   test_parent->semantic_size[axis].kind != UI_size_kind_children_sum 
+            && test_parent->semantic_size[axis].kind != UI_size_kind_fit_the_parent
+        ) {
+          usable_parent = test_parent;
+          break;
+        }
+      }
+      // Damian: This always has to work, since at build the ui layer creates a px sized root element
+      Assert(usable_parent);
+
+      root->computed_sizes[axis] = usable_parent->computed_sizes[axis] * root->semantic_size[axis].value;
+      if (root->parent->semantic_size[axis].kind == UI_size_kind_children_sum)
+      {
+        // TODO: See if doing this here manually is fine,
+        //       I cound just call the "ui_sizing_for_child_dependant_elements",
+        //       but i dont want it to go over the tree again,
+        //       i guess i could add a parameter to specify the n level to go over,
+        //       but for now i am just doing it this way.
+        UI_Box* child_sum_parent = root->parent;
+        if (child_sum_parent->alignment_axis == axis)
+        {
+          child_sum_parent->computed_sizes[axis] += root->computed_sizes[axis]; 
+        }
+        else 
+        {
+          // We extend the vertical
+          if (child_sum_parent->computed_sizes[axis] < root->computed_sizes[axis])
+          {
+            child_sum_parent->computed_sizes[axis] = root->computed_sizes[axis];
+            child_sum_parent->computed_sizes[axis] += 2 * ui_current_padding();
+          }
+        }
+        // Damian: padding and gap are already acounted for in the child_sum_parent sizing call 
+      }
+
+      for (UI_Box* child = root->first; child != 0; child = child->next)
+      {
+        ui_sizing_for_parent_dependant_elements(child, axis);
+      }
+
+    } break;
+
+    case UI_size_kind_fit_the_parent:
     {
-      ui_sizing_for_parent_dependant_elements(child, axis);
-    }
+      // Wait for all the other element kind sizes to get sized
+      for (UI_Box* child = root->first; child != 0; child = child->next)
+      {
+        ui_sizing_for_parent_dependant_elements(child, axis);
+      }
+
+      // Get the first usable parent
+      UI_Box* usable_parent = 0;
+      for (UI_Box* test_parent = root->parent; test_parent != 0; test_parent = test_parent->parent)
+      {
+        if (   test_parent->semantic_size[axis].kind != UI_size_kind_children_sum 
+            && test_parent->semantic_size[axis].kind != UI_size_kind_fit_the_parent
+        ) {
+          usable_parent = test_parent;
+          break;
+        }
+      }
+      // Damian: This always has to work, since at build the ui layer creates a px sized root element
+      Assert(usable_parent);
+
+      // Get the size left
+      F32 total_space = usable_parent->computed_sizes[axis];
+      F32 space_taken = 0.0f;
+      for (UI_Box* child = usable_parent->first; child != 0; child = child->next)
+      {
+        space_taken += child->computed_sizes[axis]; 
+      }
+      F32 space_left_to_fill = total_space - space_taken;
+      space_left_to_fill -= 2 * ui_current_padding();
+      // TODO: accound for child gapping
+      // if (root->parent->children_count > 1) // Accounf for child gapping, the most emidiate parent gaps are used
+      // {
+      //   space_left_to_fill -= (root->parent->children_count - 1) * ui_current_child_gap(); 
+      // }
+
+      // Extend current element
+      root->computed_sizes[axis] = space_left_to_fill;
+
+      // Handle non aligning axis (the aligning axis is already expecting the padding and gap for this child)
+      // TODO:       
+
+      // Extend the immediate parent if its child sum 
+      if (root->parent->semantic_size[axis].kind == UI_size_kind_fit_the_parent) 
+      {
+        NotImplemented();
+      } 
+
+      // ---
+      // TODO: This is copied from the child_sum handling of this,
+      //       guess this mean i have to make a func out of this 
+      //       or just unify this is some way
+      if (root->parent->semantic_size[axis].kind == UI_size_kind_children_sum)
+      {
+        UI_Box* child_sum_parent = root->parent;
+        if (child_sum_parent->alignment_axis == axis)
+        {
+          child_sum_parent->computed_sizes[axis] += root->computed_sizes[axis]; 
+        }
+        else 
+        {
+          // We extend the vertical
+          if (child_sum_parent->computed_sizes[axis] < root->computed_sizes[axis])
+          {
+            child_sum_parent->computed_sizes[axis] = root->computed_sizes[axis];
+            child_sum_parent->computed_sizes[axis] += 2 * ui_current_padding();
+          }
+        }
+        // Damian: padding and gap are already acounted for in the child_sum_parent sizing call 
+      }
+      // ---
+
+    } break;
   }
+
 }
 
 // Damian: This is made to calculate all the child to parent offsets
@@ -372,11 +468,8 @@ void ui_layout_pass(UI_Box* root, Axis2 axis)
   {
     if (root->alignment_axis == axis)
     {
-      child->computed_parent_rel_pos[axis] += ui_current_padding() + total_children_width_before;
-      if (child_index > 0)
-      {
-        child->computed_parent_rel_pos[axis] += ui_current_child_gap();
-      }
+      child->computed_parent_rel_pos[axis] = ui_current_padding() + total_children_width_before;
+      child->computed_parent_rel_pos[axis] += child_index * ui_current_child_gap();
       total_children_width_before += child->computed_sizes[axis];
       child_index += 1;
     }
@@ -421,6 +514,29 @@ void ui_draw_ui_helper(UI_Box* root)
   if (root->flags & UI_box_flag__has_backgound)
   {
     draw_rect(root->computed_final_rect, root->backgound_color);
+  }
+
+  if (root->flags & UI_box_flag__has_text)
+  {
+    Vec2_F32 dims = font_measure_text(g_ui_state->font_info, root->text);
+    Assert(root->computed_final_rect.width == dims.x);
+    Assert(root->computed_final_rect.height == dims.y);
+
+    test_draw_text(
+      g_ui_state->font_info, 
+      g_ui_state->font_texture, 
+      root->text, 
+      root->computed_final_rect.x,
+      root->computed_final_rect.y);
+    
+    #if 1
+    test_draw_text_lines(
+      g_ui_state->font_info, 
+      g_ui_state->font_texture, 
+      root->text, 
+      root->computed_final_rect.x, 
+      root->computed_final_rect.y);
+    #endif
   }
 
   if (root->flags & UI_box_flag__draw_padding)
@@ -473,29 +589,6 @@ void ui_draw_ui_helper(UI_Box* root)
     }
   }
   
-  if (root->flags & UI_box_flag__has_text)
-  {
-    Vec2_F32 dims = font_measure_text(g_ui_state->font_info, root->text);
-    Assert(root->computed_final_rect.width == dims.x);
-    Assert(root->computed_final_rect.height == dims.y);
-
-    test_draw_text(
-      g_ui_state->font_info, 
-      g_ui_state->font_texture, 
-      root->text, 
-      root->computed_final_rect.x,
-      root->computed_final_rect.y);
-    
-    #if 0
-    test_draw_text_lines(
-      g_ui_state->font_info, 
-      g_ui_state->font_texture, 
-      root->text, 
-      root->computed_final_rect.x, 
-      root->computed_final_rect.y);
-    #endif
-  }
-
   for (UI_Box* box = root->first; box !=0; box = box->next)
   {
     ui_draw_ui_helper(box);

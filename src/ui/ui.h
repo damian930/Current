@@ -14,8 +14,9 @@ enum Axis2 {
 enum UI_size_kind {
   UI_size_kind_px,
   UI_size_kind_children_sum,
-  UI_size_kind_percent_of_parent,
   UI_size_kind_text,
+  UI_size_kind_percent_of_parent,
+  UI_size_kind_fit_the_parent,
 };
 
 struct UI_size {
@@ -83,9 +84,9 @@ global UI_state* g_ui_state = 0;
 UI_size ui_size_make(UI_size_kind kind, F32 value);
 #define UI_SizePx(v)              ui_size_make(UI_size_kind_px, v)
 #define UI_SizeChildrenSum()      ui_size_make(UI_size_kind_children_sum, Null)
-#define UI_SizePercentOfParent(p) ui_size_make(UI_size_kind_percent_of_parent, p)
 #define UI_SizeText()             ui_size_make(UI_size_kind_text, Null)
-
+#define UI_SizePercentOfParent(p) ui_size_make(UI_size_kind_percent_of_parent, p)
+#define UI_SizeFitTheParent()     ui_size_make(UI_size_kind_fit_the_parent, Null)
 Arena* ui_current_build_arena();
 Arena* ui_prev_build_arena();
 
@@ -128,15 +129,15 @@ void ui_draw_child_gap_color(Color gap_color);
 ///////////////////////////////////////////////////////////
 // Damian: TODO stuff
 /*
-[] Figure out a place where to calculate padding 
+[ ] Figure out a place where to calculate padding 
 [x] Padding coloring
 [x] Chlld gap coloring
-[] Border     
-[] Border coloring
-[] Element that fits the parent
-   [] NOTE 1*
+[ ] Border     
+[ ] Border coloring
+[ ] Element that fits the parent
+   [ ] NOTE 1*
 =======================================================
-NOTE*: 
+NOTE 1*: 
   I am now implementing a fit the parent idea. I decided it to be a separate size kind from % of parent.
   This makes sense since % of parent is still a px size (kind of) and if is also specified up front by the builder code for the ui.
   The fit aspect of an element like spacer is only calculated after all the other sizes are done to somply fill in the space.

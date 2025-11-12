@@ -349,6 +349,8 @@ Mat4x4_F32 mat4x4_f32_translate(F32 x, F32 y, F32 z)
 #define C_MAROON      vec4_f32(0.502f, 0.0f, 0.0f, 1.0f)
 #define C_SILVER      vec4_f32(0.753f, 0.753f, 0.753f, 1.0f)
 #define C_GOLD        vec4_f32(1.0f, 0.843f, 0.0f, 1.0f)
+#define C_LIGHT_GREEN vec4_f32(0.47f, 0.67f, 0.50f, 1.0f)
+#define C_BETTER_RED  vec4_f32(0.75f, 0.22f, 0.25f, 1.0f)
 
 // Damian: Max here is ussually used as the non equals bound
 struct Range_F32 {

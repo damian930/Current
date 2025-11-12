@@ -151,78 +151,61 @@ int main()
           local B32 is_draw = false;
           ui_begin_build();
           {
-            ui_push_padding(10);
-            ui_push_child_gap(50);
+            ui_push_padding(25);
+            ui_push_child_gap(10);
+            ui_draw_child_gap_color(C_WHITE);
+            ui_draw_padding_for_current(C_GREY);
 
-            ui_begin_box(UI_SizePx(400), UI_SizeChildrenSum(), Axis2_y, "Clay like box", UI_box_flag__has_backgound, C_YELLOW, Null);
+            ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Clay like box", UI_box_flag__has_backgound, C_BETTER_RED, Null);
             {
-              ui_draw_child_gap_color(C_RED);
+              ui_draw_child_gap_color(C_WHITE);
+              ui_draw_padding_for_current(C_BLUE);
 
-              ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Box 1", UI_box_flag__has_backgound, C_PINK, Null);
-              {
-                ui_draw_padding_for_current(C_GREEN);
-                ui_draw_child_gap_color(C_PURPLE);
-
-                ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "B1 text", UI_box_flag__has_text, Color{}, "Copy");
-                {
-                  if (ui_is_clicked()) { 
-                    printf("Copy \n"); 
-                  }
-                }
-                ui_end_box();
-
-                // ui_spacer();
-
-                ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "B3 text", UI_box_flag__has_text, Color{}, "Paste");
-                {
-                  if (ui_is_clicked()) { 
-                    printf("Paste \n"); 
-                  }
-                }
-                ui_end_box();
-                
-                // Spacer here that will stretch the 2 child boxes to the sides
-                // ui_begin_box(UI_SizePercentOfParent(1), UI_SizePercentOfParent(1), Axis2_x, "TEST spacer", UI_box_flag__has_backgound, C_BLUE, Null);
-                // {}
-                // ui_end_box();
-              }
+              ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_y, "Text 1", UI_box_flag__has_text, C_LIGHT_GREEN, "Text 1");
+              {}
               ui_end_box();
 
-              ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Box 2", UI_box_flag__has_backgound, C_PINK, Null);
-              {
-                ui_draw_padding_for_current(C_GREEN);
-                ui_draw_child_gap_color(C_PURPLE);
-
-                ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "B12 text", UI_box_flag__has_text, Color{}, "Copy");
-                {
-                  if (ui_is_clicked()) { 
-                    printf("Copy \n"); 
-                  }
-                }
-                ui_end_box();
-
-                ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "B2 text", UI_box_flag__has_text, Color{}, "Paste");
-                {
-                  if (ui_is_clicked()) { 
-                    printf("Paste \n"); 
-                  }
-                }
-                ui_end_box();
-                
-                // Spacer here that will stretch the 2 child boxes to the sides
-                // ui_begin_box(UI_SizePercentOfParent(1), UI_SizePercentOfParent(1), Axis2_x, "TEST spacer", UI_box_flag__has_backgound, C_BLUE, Null);
-                // {}
-                // ui_end_box();
-              }
+              ui_begin_box(UI_SizeFitTheParent(), UI_SizeFitTheParent(), Axis2_y, "FILL PARENT TEST", UI_box_flag__has_backgound, C_LIGHT_GREEN, Null);
+              {}
               ui_end_box();
 
-              // ui_begin_box(UI_SizePercentOfParent(1), UI_SizeChildrenSum(), Axis2_x, "Box 2", UI_box_flag__has_backgound, C_PINK, Null);
-              // {
-                
-              // }
+              ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_y, "Text 2", UI_box_flag__has_text, C_LIGHT_GREEN, "Text 2");
+              {}
+              ui_end_box();
             }
             ui_end_box();
 
+
+            // ui_push_padding(30);
+            // ui_push_child_gap(10);
+
+            // ui_begin_box(UI_SizePx(1000), UI_SizeChildrenSum(), Axis2_y, "Clay like box", UI_box_flag__has_backgound, C_YELLOW, Null);
+            // {
+            //   ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "TEST %", UI_box_flag__has_backgound, C_BLUE, "");
+            //   {
+            //     ui_draw_padding_for_current(C_PINK);
+            //     ui_draw_child_gap_color(C_WHITE);
+
+            //     ui_begin_box(UI_SizePercentOfParent(0.1f), UI_SizePx(50), Axis2_x, "TEST %fasdfa", UI_box_flag__has_backgound, C_LIGHT_GREEN, "");
+            //     {
+            //     }
+            //     ui_end_box();
+
+            //     ui_begin_box(UI_SizePercentOfParent(0.1f), UI_SizePercentOfParent(0.2f), Axis2_x, "TEST %rwerwe", UI_box_flag__has_backgound, C_BETTER_RED, "");
+            //     {
+            //     }
+            //     ui_end_box();
+
+            //     ui_begin_box(UI_SizePercentOfParent(0.1f), UI_SizePx(50), Axis2_x, "TEST %dfgdfgdf", UI_box_flag__has_backgound, C_BROWN, "");
+            //     {
+            //     }
+            //     ui_end_box();
+
+            //     ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_y, "TEST %afsdfasdfs", UI_box_flags(UI_box_flag__has_backgound|UI_box_flag__has_text), C_MAROON, "TEST");
+            //     {}
+            //     ui_end_box();
+            //   }              
+            //   ui_end_box();
           }
           ui_end_build();
           
