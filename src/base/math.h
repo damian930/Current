@@ -27,7 +27,7 @@ struct Vec2_F32 {
       F32 y;
     };
     struct {
-      F32 value[2]; // Maybe changing this to v2 would be nicer
+      F32 values[2]; // Maybe changing this to v2 would be nicer
     };
   };
 };
@@ -203,6 +203,14 @@ Rect rect_from_points_vec(Vec2_F32 p1, Vec2_F32 p2)
   return rect;
 }
 
+Vec2_F32 rect_pos(Rect rect)
+{
+  Vec2_F32 result = {};
+  result.x = rect.x;
+  result.y = rect.y;
+  return result;
+}
+
 Vec2_F32 rect_dims(Rect rect)
 {
   Vec2_F32 result = {};
@@ -321,7 +329,7 @@ Mat4x4_F32 mat4x4_f32_translate(F32 x, F32 y, F32 z)
 
 // Common colors
 #define C_ORANGE      vec4_f32(1.0f, 0.647f, 0.0f, 1.0f)
-#define C_PURPLE      vec4_f32(0.502f, 0.0f, 0.502f, 1.0f)
+#define C_PURPLE      vec4_f32(0.5f, 0.0f, 0.5f, 1.0f)
 #define C_PINK        vec4_f32(0.737f, 0.580f, 0.733f, 1.0f)
 #define C_BROWN       vec4_f32(0.6f, 0.4f, 0.2f, 1.0f)
 #define C_GRAY        vec4_f32(0.502f, 0.502f, 0.502f, 1.0f)

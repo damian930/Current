@@ -151,13 +151,18 @@ int main()
           local B32 is_draw = false;
           ui_begin_build();
           {
-            ui_push_padding(5);
-            ui_push_child_gap(10);
+            ui_push_padding(10);
+            ui_push_child_gap(50);
 
             ui_begin_box(UI_SizePx(400), UI_SizeChildrenSum(), Axis2_y, "Clay like box", UI_box_flag__has_backgound, C_YELLOW, Null);
             {
+              ui_draw_child_gap_color(C_RED);
+
               ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Box 1", UI_box_flag__has_backgound, C_PINK, Null);
               {
+                ui_draw_padding_for_current(C_GREEN);
+                ui_draw_child_gap_color(C_PURPLE);
+
                 ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "B1 text", UI_box_flag__has_text, Color{}, "Copy");
                 {
                   if (ui_is_clicked()) { 
@@ -165,11 +170,47 @@ int main()
                   }
                 }
                 ui_end_box();
+
+                ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "B3 text", UI_box_flag__has_text, Color{}, "Paste");
+                {
+                  if (ui_is_clicked()) { 
+                    printf("Paste \n"); 
+                  }
+                }
+                ui_end_box();
                 
                 // Spacer here that will stretch the 2 child boxes to the sides
-                ui_begin_box(UI_SizePercentOfParent(1), UI_SizePercentOfParent(1), Axis2_x, "TEST spacer", UI_box_flag__has_backgound, C_BLUE, Null);
-                {}
+                // ui_begin_box(UI_SizePercentOfParent(1), UI_SizePercentOfParent(1), Axis2_x, "TEST spacer", UI_box_flag__has_backgound, C_BLUE, Null);
+                // {}
+                // ui_end_box();
+              }
+              ui_end_box();
+
+              ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Box 2", UI_box_flag__has_backgound, C_PINK, Null);
+              {
+                ui_draw_padding_for_current(C_GREEN);
+                ui_draw_child_gap_color(C_PURPLE);
+
+                ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "B12 text", UI_box_flag__has_text, Color{}, "Copy");
+                {
+                  if (ui_is_clicked()) { 
+                    printf("Copy \n"); 
+                  }
+                }
                 ui_end_box();
+
+                ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "B2 text", UI_box_flag__has_text, Color{}, "Paste");
+                {
+                  if (ui_is_clicked()) { 
+                    printf("Paste \n"); 
+                  }
+                }
+                ui_end_box();
+                
+                // Spacer here that will stretch the 2 child boxes to the sides
+                // ui_begin_box(UI_SizePercentOfParent(1), UI_SizePercentOfParent(1), Axis2_x, "TEST spacer", UI_box_flag__has_backgound, C_BLUE, Null);
+                // {}
+                // ui_end_box();
               }
               ui_end_box();
 
