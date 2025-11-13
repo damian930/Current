@@ -51,9 +51,9 @@ void ui_state_init(Win32_window* window, Font_info* font_info)
 
 void ui_state_release()
 {
-  arena_release(g_ui_state->perm_state_arena);
   arena_release(g_ui_state->ui_tree_build_arenas[0]);
   arena_release(g_ui_state->ui_tree_build_arenas[1]);
+  arena_release(g_ui_state->perm_state_arena);
   g_ui_state = 0;
 }
 

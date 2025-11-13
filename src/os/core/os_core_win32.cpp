@@ -30,6 +30,8 @@ void os_win32_init()
 
   scratch_arenas[0] = arena_alloc(Gigabytes_U64(1), "scratch arena 1");
   scratch_arenas[1] = arena_alloc(Gigabytes_U64(1), "scratch arena 2");
+
+  g_os_win32_state.is_initialised = true;
 }
 
 void os_win32_release()
@@ -276,6 +278,11 @@ U32 current_scratch_index = 0;
 StaticAssert(ArrayCount(scratch_arenas) == 2, "get_scratch doesnt work if the number of scratch arenas doesnt equal 2.");
 Scratch get_scratch()
 {
+  // IMPORTANT: I could also conditionally compile assert when debug mode
+  //       and a fatal error window when release mode 
+
+  Assert(g_os_win32_state.is_initialised);
+
   Assert(current_scratch_index == 0 || current_scratch_index == 1);
   current_scratch_index = (current_scratch_index == 0 ? 1 : 0);
   Arena* arena = scratch_arenas[current_scratch_index];

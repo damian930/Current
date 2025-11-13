@@ -38,6 +38,7 @@ struct OS_Win32_file {
 //         I could use malloc for it, but for now i dont. State only has static values either way (at least for now).
 struct OS_Win32_state
 {
+  B32 is_initialised;
   F64 performance_freq_per_sec;
   U32 page_size;
   U32 allocation_granularity;
