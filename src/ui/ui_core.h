@@ -2,7 +2,7 @@
 #define D_UI_H
 
 #include "base/arena.h"
-#include "text/text.h"
+#include "font/font.h"
 #include "ui_stacks.h"
 
 enum Axis2 {

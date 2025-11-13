@@ -10,31 +10,8 @@ struct Str8 {
   U8* data;
   U64 count;
 };
-
 typedef Str8 Data_buffer;
-Data_buffer data_buffer_make(Arena* arena, U64 size);
 
-U64 cstr_len(const char* name);
-
-// Damian: These null terminate until the next allocation on the same arena (See impl)
-Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len);
-Str8 str8_from_cstr(Arena* arena, const char* cstr);
-Str8 str8_from_str8(Arena* arena, Str8 str8);
-
-// Damian: Fast pass str maker, string is valid until the next time scratch is used.
-//         These are mosly for debug uses where str8 are kind require more code than i would like.
-//         Usage of these is to be minimized to local controlled situations or for debugging.
-Str8 str8_temp_from_cstr(const char* cstr);
-Str8 str8_temp_from_str8(Str8 other);
-
-// Here add some temporal things for strings
-
-#define Str8FromClit(arena_p, clit)              str8_from_cstr_len(arena_p, clit, ArrayCount(clit) - 1)
-#define Str8FromClit_TempNullTerm(arena_p, clit) str8_from_cstr_len_temp_null_term(arena_p, clit, ArrayCount(clit) - 1)
-
-///////////////////////////////////////////////////////////
-// Damian: THIS IS NEW CODE, SO THIS IS SEPARATED, KIND DEBUG
-//
 enum Str8_match_flags : U32 {
   Str8_match_flag_NONE            = (1 << 0),
   Str8_match_flag_ignore_case     = (1 << 1),
@@ -52,6 +29,24 @@ struct Str8_list {
   Str8_node* last;
   U64 count;
 };
+
+// Damian: Data_buffer stuff
+Data_buffer data_buffer_make(Arena* arena, U64 size);
+
+// Damian: Extra cstr helpers
+U64 cstr_len(const char* name);
+
+// Damian: These null terminate until the next allocation on the same arena (See impl)
+Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len);
+Str8 str8_from_cstr(Arena* arena, const char* cstr);
+Str8 str8_from_str8(Arena* arena, Str8 str8);
+#define Str8FromClit(arena_p, clit) str8_from_cstr_len(arena_p, clit, ArrayCount(clit) - 1)
+
+// Damian: Fast pass str maker, string is valid until the next time scratch is used.
+//         These are mosly for debug uses where str8 are kind require more code than i would like.
+//         Usage of these is to be minimized to local controlled situations or for debugging.
+Str8 str8_temp_from_cstr(const char* cstr);
+Str8 str8_temp_from_str8(Str8 other);
 
 U8 char_to_lower(U8 ch);
 U8 char_to_upper(U8 ch);

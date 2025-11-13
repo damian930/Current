@@ -25,7 +25,7 @@ Image2D load_png(Arena* arena, Str8 file_path, B32 do_flip_y)
   Scratch scratch = get_scratch();
   {
     stbi_set_flip_vertically_on_load(do_flip_y);
-    Str8 path_nt = str8_from_str8_temp_null_term(scratch.arena, file_path);
+    Str8 path_nt = str8_from_str8(scratch.arena, file_path);
     data = stbi_load("../data/jimmy.png", &width, &height, &nrChannels, 0);
     int x = 0;
   }

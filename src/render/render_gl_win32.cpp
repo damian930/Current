@@ -482,7 +482,8 @@ void test_draw_texture_crop(
 // }
 
 // TODO: Move this 
-#include "text/text.h"
+#include "font/font.h"
+#include "font/font.cpp"
 
 void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32 x, F32 y)
 {
@@ -500,7 +501,8 @@ void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32
       x_offset += data->left_side_bearing;
       Rect codepoint_rect = codepoint_rect_from_data(font_info, data);
       
-      Rect dest_rect = rect_make(x_offset, baseline_y - data->glyph_bbox_y1, codepoint_rect.width, codepoint_rect.height);
+      // TODO: Make sure i am not 1 px off due to range includeness
+      Rect dest_rect = rect_make(x_offset, baseline_y - data->glyph_bbox.y1, codepoint_rect.width, codepoint_rect.height);
       test_draw_texture_pro(font_texture, codepoint_rect, dest_rect, C_TRANSPARENT);
       
       x_offset += data->advance_width;

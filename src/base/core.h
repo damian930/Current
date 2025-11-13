@@ -26,16 +26,12 @@ typedef S16 B16;
 typedef S32 B32;
 typedef S64 B64;
 
-// TODO: Need something better that this 
-// #define APP_FAILED(c_str, ...) { printf(c_str, __VA_ARGS__); exit(1); }
-
 #define global        static
 #define local_persist static
 #define local         static
 #define file_private  static
 
 #define Null NULL
-#define InvalidIndex_S32 (-1)
 
 #define DefereLoop(start_exp, end_exp) for(U64 __dli = ((start_exp), 0); __dli < 1; __dli += 1, (end_exp))
 #define ForEach(it_name, arr)          for (U64 it_name = 0; it_name < ArrayCount(arr); it_name += 1)
@@ -173,19 +169,19 @@ typedef S64 B64;
 						}
 
 #define StackPush(list, new_node) StackPush_Name((list), (new_node), first, next)
-#define StackPop(list) StackPop_Name(list, first, next)
+#define StackPop(list)            StackPop_Name(list, first, next)
 
 #define QueuePushFront(list, new_node) QueuePushFront_Name((list), (new_node), first, last, next)
-#define QueuePushBack(list, new_node) QueuePushBack_Name((list), (new_node), first, last, next)
+#define QueuePushBack(list, new_node)  QueuePushBack_Name((list), (new_node), first, last, next)
 
 #define DllPushFront(list_p, new_node_p) DllPushFront_Name((list_p), (new_node_p), first, last, next, prev)
-#define DllPushBack(list_p, new_node_p) DllPushBack_Name((list_p), (new_node_p), first, last, next, prev)
-#define DllPopNode(list_p, node_p) DllPopNode_Name((list_p), (node_p), first, last, next, prev)
+#define DllPushBack(list_p, new_node_p)  DllPushBack_Name((list_p), (new_node_p), first, last, next, prev)
+#define DllPopNode(list_p, node_p)       DllPopNode_Name((list_p), (node_p), first, last, next, prev)
 // NOTE: I have not yet figured out how i want the pops to work here
 
 // NOTE: S  -> static array
 // NOTE: NS -> non static array
-#define ShiftToArrEnd_S(Type, arr_p, index_of_element_to_shift)          \
+#define ShiftToArrEnd_Static(Type, arr_p, index_of_element_to_shift)     \
           {                                                              \
             Assert(index_of_element_to_shift < ArrayCount(hand->cards)); \
             for (int shift_index = index_of_element_to_shift;            \
@@ -197,8 +193,6 @@ typedef S64 B64;
               SwapPointers(Type, thing_to_shift, next);                  \
             }                                                            \
           } 
-#define ShiftToArrEnd_NS(Type, arr_p, arr_count, index_of_element_to_shift)
-
 
 
 

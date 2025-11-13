@@ -43,6 +43,8 @@ struct OS_Win32_state
   U32 allocation_granularity;
 };
 
+// TODO: Implement errors and asserts and exits for the app when this layer is used before beeing initilised
+//       Or just have it not crash, but also not work.
 global OS_Win32_state g_os_win32_state = {};
 
 // State

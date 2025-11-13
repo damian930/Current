@@ -25,7 +25,7 @@ B32 ui_button(Color color, const char* text, const char* key, const char* text_k
 void ui_checkbox_entry(B32* b, U32* value, U32 value_on_pick, const char* text, const char* key)
 {
   // Box, label
-  Color color = (*b ? C_LIGHT_GREEN : C_BETTER_RED);
+  Color color = (*b ? C_LIGHT_GREEN : C_BLUE);
   ui_begin_box(UI_SizePx(30), UI_SizePx(30), Axis2_x, key, UI_box_flag__has_backgound, color, "");
   {
     if (ui_is_clicked())

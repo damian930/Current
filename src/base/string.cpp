@@ -5,6 +5,9 @@
 #include "arena.cpp"
 #include "math.cpp"
 
+///////////////////////////////////////////////////////////
+// Damian: Data_buffer stuff
+//
 Data_buffer data_buffer_make(Arena* arena, U64 size)
 {
   Data_buffer buffer = {};
@@ -13,6 +16,9 @@ Data_buffer data_buffer_make(Arena* arena, U64 size)
   return buffer;
 }
 
+///////////////////////////////////////////////////////////
+// Damian: Extra cstr helpers
+//
 U64 cstr_len(const char* name)
 {
   U64 len = 0;
@@ -22,6 +28,9 @@ U64 cstr_len(const char* name)
   return len;
 }
 
+///////////////////////////////////////////////////////////
+// Damian: String stuff
+//
 Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len)
 {
   Str8 str = {};
@@ -49,9 +58,9 @@ Str8 str8_from_str8(Arena* arena, Str8 str8)
 Str8 str8_temp_from_cstr(const char* cstr)
 {
   Scratch scratch = get_scratch();
-  Str8 str8 = str8_from_cstr(scratch.arena, cstr);
+  Str8 str = str8_from_cstr(scratch.arena, cstr);
   end_scratch(&scratch);
-  return str8;
+  return str;
 }
 
 Str8 str8_temp_from_str8(Str8 other)
@@ -62,9 +71,6 @@ Str8 str8_temp_from_str8(Str8 other)
   return str;
 }
 
-///////////////////////////////////////////////////////////
-// Damian: THIS IS NEW CODE, SO THIS IS SEPARATED, KIND DEBUG
-//
 U8 char_to_lower(U8 ch)
 {
   U8 result = ch;
@@ -193,7 +199,7 @@ Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, U32 flags)
   return list;
 }
 
-// TODO: This is DEBUG
+
 Str8_list str8_split_by_cstr(Arena* arena, Str8 str, const char* sep, U32 flags)
 {
   Str8_list list = {};
@@ -204,11 +210,6 @@ Str8_list str8_split_by_cstr(Arena* arena, Str8 str, const char* sep, U32 flags)
   end_scratch(&scratch);
   return list;
 }
-
-// Damian: Not yet doing this, sice then the arena has to also have the string on it
-//         Dont know about that yet
-// Str8_list cstr_split_by_cstr(Arena* arena, const char* str, const char* sep, U32 flags);
-
 
 Str8 get_file_basename(Str8 path)
 {
@@ -265,7 +266,6 @@ Str8 result = {};
   end_scratch(&scratch);
   return result;
 }
-
 
 
 

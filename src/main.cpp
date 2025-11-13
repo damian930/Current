@@ -70,8 +70,8 @@ Pair_char_texture get_char_texture(U8 codepoint)
 // - Do something with font better
 // - Render some text 
 
-#include "text/text.h"
-#include "text/text.cpp"
+#include "font/font.h"
+#include "font/font.cpp"
 
 // TODO: Remove the extern forlde rand just create a "3rd-party" folder and put all the STBs in there
 int main()
@@ -96,149 +96,146 @@ int main()
   //     stbtt_MakeCodepointBitmap(fontInfo, &txBuffer[offset], x2 - x1, y2 - y1, txWidth, scale, scale, text[i]);
   //     x += (dx + kern) * scale;
   // }
-
-  Arena* arena = arena_alloc(Kilobytes_U64(10), "Test arena");
-  Str8 str = str8_from_cstr(arena, "Flopper");
-  // pritnf("Str: %s \n", str.data);
-  arena_release(arena);
-
-  Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
-  // #define FONT_PATH "../data/papyrus.ttf"
-  #define FONT_PATH "../data/Roboto-Regular.ttf"
-  Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 52, Str8FromClit(font_arena, FONT_PATH));
   
   Win32_window* window = 0;
   DefereLoop(os_win32_init(), os_win32_release())
   DefereLoop(win32_gfx_init(), win32_gfx_release())
   DefereLoop(window = win32_create_window(), win32_close_window(window)) 
   DefereLoop(r_gl_win32_state_init(), r_gl_win32_state_release()) 
-  DefereLoop(ui_state_init(window, font_info), ui_state_release()) 
   {
-    Texture2D font_texture = create_a_texture_from_font_atlas(font_info);
-    ui_equip_font_texture(font_texture);
-    DefereLoop(r_gl_win32_equip_window(window), r_gl_win32_remove_window()) 
+    Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
+    // #define FONT_PATH "../data/papyrus.ttf"
+    #define FONT_PATH "../data/Roboto-Regular.ttf"
+    Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 52, Str8FromClit(font_arena, FONT_PATH));
+    
+    DefereLoop(ui_state_init(window, font_info), ui_state_release()) 
     {
-      r_gl_win32_set_frame_rate(144);
-      load_char_textures();
-
-      // text_layer_release(); 
-      // Damian: Remove this to not worry about this for now
-
-
-      // for (Font_codepoint_data_node* node = font_info->hash_list->first; 
-      //      node != 0; 
-      //      node = node->next
-      // ) {
-      //   printf("%c: (%d, %d), (%d, %d) \n", node->codepoint, node->codepoint_offset.x0, node->codepoint_offset.y0, node->codepoint_offset.x1, node->codepoint_offset.y1);
-      // }
-
-      // for (Font_kern_node* node = font_info->kern_list.first; node != 0; node = node->next)
-      // {
-        // printf("C1: %c, C2: %c, Add: %f \n", node->kern_pair.codepoint1, node->kern_pair.codepoint2, node->kern_pair.advance);
-      // }
-
-
-      // stbi_write_png("test_font_atlas_bitmap.png", font_info->font_atlas.width, font_info->font_atlas.height, 1, font_info->font_atlas.data_buffer.data, 0);
-
-      // Rect rect = font_measure_text(font_info, Str8FromClit(font_arena, "Flopper S[]"));
-      // printf("Font measure: W-->%f, H-->%f \n", rect.width, rect.height);
-
-      while (!win32_window_shoud_close(window))
+      Texture2D font_texture = create_a_texture_from_font_atlas(font_info);
+      ui_equip_font_texture(font_texture);
+      DefereLoop(r_gl_win32_equip_window(window), r_gl_win32_remove_window()) 
       {
-        DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
-        {
-          // test_draw_text(font_info, font_texture, Str8FromClit(font_arena, "Flopper S[]"), 0, 0);
-          // draw_rect(rect, color_make(1.0f, 0, 0, 0.3));
-
-          // local B32 is_draw = false;
-
-          auto row_test = [](const char* id, Color color, const char* app_name, const char* time) {
-            ui_h_stack(id)
-            {
-              // TODO: These dont work at all
-              ui_set_max_size(800, Axis2_x);
-              ui_set_min_size(300, Axis2_x);
-
-              ui_set_backgound_color(color);
-              ui_label(app_name, id);
-              ui_spacer();
-              ui_label(time, id);
-
-              if(ui_is_clicked())
-              {
-                printf("%s \n", app_name);
-              }
-            }
-          };
-
-          ui_begin_build();
-          {
-            
-            ui_v_stack("V stack id")
-            {
-              row_test("1", C_LIGHT_GREEN, "Telegram", "2:55");
-              row_test("2", C_BROWN, "Fortnite", "3:14");
-              row_test("3", C_LIGHT_GREEN, "The finals", "1:15");
-              row_test("4", C_BROWN, "Hearthstone", "4:12");
-            }
-
-
-          //   local B32 b_s[3] = {};
-          //   local Color color_arr[3] = {C_LIGHT_GREEN, C_PURPLE, C_BROWN};
-          //   local U32 color_index = 0;
-          //   ui_checkbox_entry(&b_s[0], &color_index, 0, "Entry 1", "Entry key 1");
-          //   ui_checkbox_entry(&b_s[1], &color_index, 1, "Entry 2", "Entry key 2");
-          //   ui_checkbox_entry(&b_s[2], &color_index, 2, "Entry 3", "Entry key 3");
- 
-          //   if (ui_button(color_arr[color_index], "Button", "Button key", "Label key"))
-          //   {
-          //     Color color = color_arr[color_index];
-          //     printf("Color: (%d, %d, %d) \n", (U32)(color.r * 255), (U32)(color.g * 255), (U32)(color.b * 255));
-          //   }
-
-
-
-
-
-            // ui_push_padding(0);
-            // ui_push_child_gap(0);
-            // // ui_draw_child_gap_color(C_WHITE);
-            // // ui_draw_padding_for_current(C_GREY);
-
-            // ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_y, "Clay like box", UI_box_flag__has_backgound, C_ORANGE, "");
-            // {
-            //   ui_set_min_size(400, Axis2_x);
-            //   ui_set_max_size(800, Axis2_x);
-
-            //   // ui_begin_box(UI_SizeFitTheParent(), UI_SizePx(10), Axis2_x, "Fit 1", UI_box_flag__has_backgound, C_LIGHT_GREEN, "");
-            //   // {}
-            //   // ui_end_box();
-
-            //   ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Row 1", UI_box_flag__has_backgound, C_PINK, "");
-            //   {
-            //     // ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "Tect for row 1 1", UI_box_flag__has_text, C_TRANSPARENT, "Copy");
-            //     // {}
-            //     // ui_end_box();
-
-            //     ui_begin_box(UI_SizeFitTheParent(),UI_SizeFitTheParent(), Axis2_x, "Fit 1", UI_box_flag__NONE, C_LIGHT_GREEN, "");
-            //     {}
-            //     ui_end_box();
-                
-            //     // ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "Tect for row 1 2", UI_box_flag__has_text, C_TRANSPARENT, "IMAGE");
-            //     // {}
-            //     // ui_end_box();  
-            //   }
-            //   ui_end_box();
-              
-            // }
-            // ui_end_box();
-
-
-          }
-          ui_end_build();
+        r_gl_win32_set_frame_rate(144);
+        load_char_textures();
+        
+        // text_layer_release(); 
+        // Damian: Remove this to not worry about this for now
+        
+        
+        // for (Font_codepoint_data_node* node = font_info->hash_list->first; 
+        //      node != 0; 
+        //      node = node->next
+        // ) {
+          //   printf("%c: (%d, %d), (%d, %d) \n", node->codepoint, node->codepoint_offset.x0, node->codepoint_offset.y0, node->codepoint_offset.x1, node->codepoint_offset.y1);
+          // }
           
-          ui_draw_ui();
-
+          // for (Font_kern_node* node = font_info->kern_list.first; node != 0; node = node->next)
+          // {
+            // printf("C1: %c, C2: %c, Add: %f \n", node->kern_pair.codepoint1, node->kern_pair.codepoint2, node->kern_pair.advance);
+            // }
+            
+            
+            // stbi_write_png("test_font_atlas_bitmap.png", font_info->font_atlas.width, font_info->font_atlas.height, 1, font_info->font_atlas.data_buffer.data, 0);
+            
+            // Rect rect = font_measure_text(font_info, Str8FromClit(font_arena, "Flopper S[]"));
+            // printf("Font measure: W-->%f, H-->%f \n", rect.width, rect.height);
+            
+            while (!win32_window_shoud_close(window))
+            {
+              DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
+              {
+                // test_draw_text(font_info, font_texture, Str8FromClit(font_arena, "Flopper S[]"), 0, 0);
+                // draw_rect(rect, color_make(1.0f, 0, 0, 0.3));
+                
+                // local B32 is_draw = false;
+                
+                auto row_test = [](const char* id, Color color, const char* app_name, const char* time) {
+                  ui_h_stack(id)
+                  {
+                    // TODO: These dont work at all
+                    ui_set_max_size(800, Axis2_x);
+                    ui_set_min_size(300, Axis2_x);
+                    
+                    ui_set_backgound_color(color);
+                    ui_label(app_name, id);
+                    ui_spacer();
+                    ui_label(time, id);
+                    
+                    if(ui_is_clicked())
+                    {
+                      printf("%s \n", app_name);
+                    }
+                  }
+                };
+                
+                ui_begin_build();
+                {
+                  
+                  ui_v_stack("V stack id")
+                  {
+                    row_test("1", C_LIGHT_GREEN, "Telegram", "2:55");
+                    row_test("2", C_BROWN, "Fortnite", "3:14");
+                    row_test("3", C_LIGHT_GREEN, "The finals", "1:15");
+                    row_test("4", C_BROWN, "Hearthstone", "4:12");
+                  }
+                  
+                  
+                  //   local B32 b_s[3] = {};
+                  //   local Color color_arr[3] = {C_LIGHT_GREEN, C_PURPLE, C_BROWN};
+                  //   local U32 color_index = 0;
+                  //   ui_checkbox_entry(&b_s[0], &color_index, 0, "Entry 1", "Entry key 1");
+                  //   ui_checkbox_entry(&b_s[1], &color_index, 1, "Entry 2", "Entry key 2");
+                  //   ui_checkbox_entry(&b_s[2], &color_index, 2, "Entry 3", "Entry key 3");
+                  
+                  //   if (ui_button(color_arr[color_index], "Button", "Button key", "Label key"))
+                  //   {
+                    //     Color color = color_arr[color_index];
+                    //     printf("Color: (%d, %d, %d) \n", (U32)(color.r * 255), (U32)(color.g * 255), (U32)(color.b * 255));
+                    //   }
+                    
+                    
+                    
+                    
+                    
+                    // ui_push_padding(0);
+                    // ui_push_child_gap(0);
+                    // // ui_draw_child_gap_color(C_WHITE);
+                    // // ui_draw_padding_for_current(C_GREY);
+                    
+                    // ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_y, "Clay like box", UI_box_flag__has_backgound, C_ORANGE, "");
+                    // {
+                      //   ui_set_min_size(400, Axis2_x);
+                      //   ui_set_max_size(800, Axis2_x);
+                      
+                      //   // ui_begin_box(UI_SizeFitTheParent(), UI_SizePx(10), Axis2_x, "Fit 1", UI_box_flag__has_backgound, C_LIGHT_GREEN, "");
+                      //   // {}
+                      //   // ui_end_box();
+                      
+                      //   ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Row 1", UI_box_flag__has_backgound, C_PINK, "");
+                      //   {
+                        //     // ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "Tect for row 1 1", UI_box_flag__has_text, C_TRANSPARENT, "Copy");
+                        //     // {}
+                        //     // ui_end_box();
+                        
+                        //     ui_begin_box(UI_SizeFitTheParent(),UI_SizeFitTheParent(), Axis2_x, "Fit 1", UI_box_flag__NONE, C_LIGHT_GREEN, "");
+                        //     {}
+                        //     ui_end_box();
+                        
+                        //     // ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "Tect for row 1 2", UI_box_flag__has_text, C_TRANSPARENT, "IMAGE");
+                        //     // {}
+                        //     // ui_end_box();  
+                        //   }
+                        //   ui_end_box();
+                        
+                        // }
+                        // ui_end_box();
+                        
+                        
+                      }
+                      ui_end_build();
+                      
+                      ui_draw_ui();
+                      
+                    }
         }
       }
     }

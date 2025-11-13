@@ -1,98 +1,26 @@
-#ifndef D_TEST_H
-#define D_TEST_H
+#ifndef D_FONT_CPP
+#define D_FONT_CPP
 
-#include "base/string.h"
+// TODO: Remove this
+// #define STB_IMAGE_WRITE_IMPLEMENTATION
+// #include "third_party/stb/stb_image_write.h"
 
-#include "other/image_stuff/image_loader.h"
-#include "base/math.h"
-
-#include "base/string.cpp"
-#include "base/math.cpp"
-
-// #include "render/render_gl_win32.h"
+// #include "other/image_stuff/image_loader.cpp"
 
 #define STB_TRUETYPE_IMPLEMENTATION
-#ifndef STB_TRUE_TYPE_H
-#define STB_TRUE_TYPE_H
-  #include "third_party/stb/stb_truetype.h"
-#endif
 
-struct Font_atlas_codepoint_offset {
-  U32 x0;
-  U32 y0;
-  U32 x1;
-  U32 y1;
-};
+#include "font.h"
+#include "base/math.cpp"
 
-// TODO: This need a better name for sure
-struct Font_codepoint_data_node {
-  Font_codepoint_data_node* next;
-  Font_codepoint_data_node* prev;
-  
-  U8 codepoint;
-  Font_atlas_codepoint_offset codepoint_offset;
-
-  // Scaled up front
-  F32 advance_width;     
-  F32 left_side_bearing; 
-  F32 glyph_bbox_x0; // TODO: Make this a general struct for offsets in a BB
-  F32 glyph_bbox_y0;
-  F32 glyph_bbox_x1;
-  F32 glyph_bbox_y1;
-};
-
-struct Font_hash_list {
-  Font_codepoint_data_node* first;
-  Font_codepoint_data_node* last;
-  U32 node_count;
-};
-
-struct Font_kern_pair {
-  U8 codepoint1;
-  U8 codepoint2;
-  F32 advance;
-};
-
-struct Font_kern_node {
-  Font_kern_node* next;
-  Font_kern_node* prev;
-  Font_kern_pair kern_pair; // This is scaled up front
-};
-
-struct Font_kern_list {
-  Font_kern_node* first;
-  Font_kern_node* last;
-  U32 count;
-};
-
-struct Font_info {
-  // Font hash entries
-  Font_hash_list hash_list[1];
-
-  Font_kern_list kern_list;
-
-  // Font data (All these are scaled up front)
-  Image2D font_atlas;
-  U32 font_size;
-  F32 scale;
-  F32 ascent;
-  F32 descent;
-  F32 line_gap;
-  F32 max_advance_width;
-};
-
-// Damian: Removed the ussual self contained layer from here, since not sure if need it yet
-// void text_layer_init();
-// void text_layer_release();
-
-Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints, U32 font_size, Str8 font_ttf_file_path)
-{
+Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints, 
+                     U32 font_size, Str8 font_ttf_file_path
+) {
   Font_info* result_font_info = ArenaPush(arena, Font_info);
 
   Scratch scratch = get_scratch();
   {
     // Getting the ttf data, Creating the font
-    Data_buffer ttf_data = read_file_inplace(scratch.arena, font_ttf_file_path);
+    Data_buffer ttf_data = os_win32_file_read_inplace(scratch.arena, font_ttf_file_path);
 
     stbtt_fontinfo font_info = {};
     stbtt_InitFont(&font_info, ttf_data.data, stbtt_GetFontOffsetForIndex(ttf_data.data, 0));
@@ -141,6 +69,7 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints, U32 font_size,
 
     F32 scale = stbtt_ScaleForPixelHeight(&font_info, font_size);
     result_font_info->scale = scale; 
+    
     {
       int ascent  = {};
       int descent = {};
@@ -165,21 +94,20 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints, U32 font_size,
       }
       ValueToMax(result_font_info->max_advance_width, advance_width);
 
-      F32 glyph_bbox_x0 = {}; // TODO: Make this a general struct for offsets in a BB
-      F32 glyph_bbox_y0 = {};
-      F32 glyph_bbox_x1 = {};
-      F32 glyph_bbox_y1 = {};
+      Bounding_box glyph_bbox = {};
       {
         int x0 = {};
         int y0 = {};
         int x1 = {};
         int y1 = {};
+        // TODO: Make sure that this funstion return x1 and y1 non inclusive style.
+        //       For 
         int succ = stbtt_GetCodepointBox(&font_info, it_codepoint, &x0, &y0, &x1, &y1);
         Assert(succ);
-        glyph_bbox_x0 = scale * (F32)x0;
-        glyph_bbox_y0 = scale * (F32)y0;
-        glyph_bbox_x1 = scale * (F32)x1;
-        glyph_bbox_y1 = scale * (F32)y1;
+        glyph_bbox.x0 = scale * (F32)x0;
+        glyph_bbox.y0 = scale * (F32)y0;
+        glyph_bbox.x1 = scale * (F32)x1;
+        glyph_bbox.y1 = scale * (F32)y1;
       }
 
       // TODO: This has to be changed
@@ -195,15 +123,13 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints, U32 font_size,
       new_node->codepoint         = it_codepoint;
       new_node->advance_width     = advance_width;
       new_node->left_side_bearing = left_side_bearing;
-      new_node->codepoint_offset  = Font_atlas_codepoint_offset{codepoint_pached_data->x0, 
-                                                                codepoint_pached_data->y0, 
-                                                                codepoint_pached_data->x1, 
-                                                                codepoint_pached_data->y1};
-      new_node->glyph_bbox_x0 = glyph_bbox_x0;
-      new_node->glyph_bbox_y0 = glyph_bbox_y0;
-      new_node->glyph_bbox_x1 = glyph_bbox_x1;
-      new_node->glyph_bbox_y1 = glyph_bbox_y1;
-
+      // TODO: Make sure that this funstion return x1 and y1 non inclusive style.
+      new_node->bb_on_atlas = bounding_box_make(codepoint_pached_data->x0, 
+                                                codepoint_pached_data->y0, 
+                                                codepoint_pached_data->x1, 
+                                                codepoint_pached_data->y1);
+      new_node->glyph_bbox = glyph_bbox;
+      
       DllPushBack(list, new_node);
       list->node_count += 1;
     }
@@ -283,10 +209,10 @@ Rect codepoint_rect_from_font(Font_info* font_info, U8 codepoint)
   source_rect.width = font_info->max_advance_width;
   source_rect.height = font_info->ascent + Abs(F32, font_info->descent);
   if (node) {
-    source_rect.x = node->codepoint_offset.x0;
-    source_rect.y = node->codepoint_offset.y0;
-    source_rect.width = node->codepoint_offset.x1 - node->codepoint_offset.x0;
-    source_rect.height = node->codepoint_offset.y1 - node->codepoint_offset.y0;
+    source_rect.x = node->bb_on_atlas.x0;
+    source_rect.y = node->bb_on_atlas.y0;
+    source_rect.width = node->bb_on_atlas.x1 - node->bb_on_atlas.x0;
+    source_rect.height = node->bb_on_atlas.y1 - node->bb_on_atlas.y0;
   }
   return source_rect;
 }
@@ -298,10 +224,10 @@ Rect codepoint_rect_from_data(Font_info* font_info, Font_codepoint_data_node* no
   Rect source_rect = {};
   if (node) 
   {
-    source_rect.x = node->codepoint_offset.x0;
-    source_rect.y = node->codepoint_offset.y0;
-    source_rect.width = node->codepoint_offset.x1 - node->codepoint_offset.x0;
-    source_rect.height = node->codepoint_offset.y1 - node->codepoint_offset.y0;
+    source_rect.x = node->bb_on_atlas.x0;
+    source_rect.y = node->bb_on_atlas.y0;
+    source_rect.width = node->bb_on_atlas.x1 - node->bb_on_atlas.x0;
+    source_rect.height = node->bb_on_atlas.y1 - node->bb_on_atlas.y0;
   }
   else 
   {
@@ -313,7 +239,7 @@ Rect codepoint_rect_from_data(Font_info* font_info, Font_codepoint_data_node* no
   return source_rect;
 }
 
-// NOTE: Returning Vec2_F32 might have made more sense tho
+
 Vec2_F32 font_measure_text(Font_info* font_info, Str8 text)
 {
   F32 result_width = 0.0f;
@@ -401,15 +327,7 @@ Texture2D create_a_texture_from_font_atlas(Font_info* font_info)
   return texture;
 }
 
-
-
-
-
-// Load font 
-// Create the font data
-// Store font data
-// Create bitmaps for a font size
-
+// TODO: Make sure that text rendering is fine working since boundig boxes are non non inlusive for x1,y1
 
 
 
