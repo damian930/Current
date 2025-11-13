@@ -178,7 +178,7 @@ void r_gl_win32_state_init()
 
   g_win32_gl_renderer->frame_rate = R_WIN32_GL_DEFAULT_FRAME_RATE;
 
-  g_win32_gl_renderer->frame_arena = arena_alloc(Kilobytes_U64(10), "Renderer GL frame arena");
+  g_win32_gl_renderer->frame_arena = arena_alloc(Kilobytes_U64(100), "Renderer GL frame arena");
 }
 
 void r_gl_win32_state_release()
@@ -287,7 +287,7 @@ void r_gl_win32_begin_frame()
     *viewport_rect__top_left_to_bottom_right = ArenaPush(frame_arena, Rect);
     *draw_list                               = ArenaPush(frame_arena, DEBUG_draw_rect_list);
 
-    **frame_start_time_in_sec                 = get_monotonic_time();
+    **frame_start_time_in_sec                 = os_win32_get_monotonic_time();
     **viewport_rect__top_left_to_bottom_right = win32_get_client_area_rect(window);
     **draw_list                               = DEBUG_draw_rect_list{};
 
@@ -328,9 +328,9 @@ void r_gl_win32_end_frame()
   // Enforce fps
   {
     F64 frame_time = 1.0 / r_gl_win32_get_frame_rate();
-    F64 current_frame_time = get_monotonic_time() - *frame_start_time_in_sec;
+    F64 current_frame_time = os_win32_get_monotonic_time() - *frame_start_time_in_sec;
     while (current_frame_time < frame_time) {
-      current_frame_time = get_monotonic_time() - *frame_start_time_in_sec;
+      current_frame_time = os_win32_get_monotonic_time() - *frame_start_time_in_sec;
     }
   }
   

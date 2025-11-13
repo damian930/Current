@@ -2,8 +2,8 @@
 #define BASE_STRING_CPP
 
 #include "string.h"
-#include "arena.h"
-// #include "math/math.h"
+#include "arena.cpp"
+#include "math.cpp"
 
 Data_buffer data_buffer_make(Arena* arena, U64 size)
 {
@@ -21,7 +21,6 @@ U64 cstr_len(const char* name)
   }
   return len;
 }
-
 
 Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len)
 {
@@ -43,43 +42,25 @@ Str8 str8_from_cstr(Arena* arena, const char* cstr)
 
 Str8 str8_from_str8(Arena* arena, Str8 str8)
 {
-  Str8 result = {};
-  result.count = str8.count;
-  result.data  = ArenaPushArr(arena, U8, result.count);
-  MemCopy(result.data, str8.data, result.count);
-  U8* nt = ArenaPush(arena, U8);
-  *nt = '\0';
-  arena_pop(arena, 1);
+  Str8 result = str8_from_cstr_len(arena, (char*)str8.data, str8.count);
   return result; 
 }
 
-Str8 str8_from_cstr_len_temp_null_term(Arena* arena, const char* cstr, U64 len)
+Str8 str8_temp_from_cstr(const char* cstr)
 {
-  Str8 str8 = str8_from_cstr_len(arena, cstr, len);
-  U8* byte_past_last = ArenaPush(arena, U8);
-  *byte_past_last = '\0';
-  arena_pop(arena, 1);
+  Scratch scratch = get_scratch();
+  Str8 str8 = str8_from_cstr(scratch.arena, cstr);
+  end_scratch(&scratch);
   return str8;
 }
 
-Str8 str8_from_cstr_temp_null_term(Arena* arena, const char* cstr)
+Str8 str8_temp_from_str8(Str8 other)
 {
-  Str8 str8 = str8_from_cstr(arena, cstr);
-  U8* byte_past_last = ArenaPush(arena, U8);
-  *byte_past_last = '\0';
-  arena_pop(arena, 1);
-  return str8;
+  Scratch scratch = get_scratch();
+  Str8 str = str8_from_str8(scratch.arena, other);
+  end_scratch(&scratch);
+  return str;
 }
-
-Str8 str8_from_str8_temp_null_term(Arena* arena, Str8 str8)
-{
-  Str8 result = str8_from_str8(arena, str8);
-  U8* byte_past_last = ArenaPush(arena, U8);
-  *byte_past_last = '\0';
-  arena_pop(arena, 1);
-  return result;
-}
-
 
 ///////////////////////////////////////////////////////////
 // Damian: THIS IS NEW CODE, SO THIS IS SEPARATED, KIND DEBUG

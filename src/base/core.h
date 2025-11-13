@@ -27,7 +27,7 @@ typedef S32 B32;
 typedef S64 B64;
 
 // TODO: Need something better that this 
-#define APP_FAILED(c_str, ...) { printf(c_str, __VA_ARGS__); exit(1); }
+// #define APP_FAILED(c_str, ...) { printf(c_str, __VA_ARGS__); exit(1); }
 
 #define global        static
 #define local_persist static

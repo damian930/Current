@@ -9,12 +9,17 @@ struct Arena {
   
   Str8 name; 
   U64 offset_for_meta_data;
-  U64 mem_used;
-  U64 mem_allocated;
-};
-#define ArenaMetaDataSize (sizeof(Arena))
-StaticAssert(ArenaMetaDataSize >= sizeof(Arena), "Arena meta data doesnt capture the size of the arena.");
 
+  U64 mem_reserved;
+  U64 mem_commited;
+  U64 mem_used;
+};
+#define ArenaStaticMetaDataSize (sizeof(Arena))
+StaticAssert(ArenaStaticMetaDataSize >= sizeof(Arena), "Arena meta data doesnt capture the size of the arena.");
+
+#define ArenaDefaultCommitSize Kilobytes_U64(64)
+
+// TODO: Need a way to initialise this with a specific set of parameter for commit, reserve ...
 Arena* arena_alloc(U64 n_bytes_to_allocate, const char* name);
 void arena_clear(Arena* arena);
 void arena_release(Arena* arena);
@@ -42,20 +47,9 @@ struct Temp_arena {
 Temp_arena temp_arena_begin(Arena* arena);
 void temp_arena_end(Temp_arena* temp);
 
-///////////////////////////////////////////////////////////
-// Damian: Globals 
-//
-#define NumberOfScratchArenas 2
-extern Arena* scratch_arenas[NumberOfScratchArenas]; // TODO: This might not be great here 
-extern U32 current_scratch_index;
 
-typedef Temp_arena Scratch;
-Scratch get_scratch();
-void end_scratch(Scratch* scratch);
-    
+
+
+
+
 #endif
-
-
-
-
-

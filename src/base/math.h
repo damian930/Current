@@ -407,6 +407,20 @@ Color color_set_a(Color color, F32 new_a)
   return result;
 }
 
+U64 align_up(U64 value, U64 alignment)
+{
+  U64 rounded = (value - 1 + alignment) - ((value - 1 + alignment) % alignment); 
+  return rounded;
+}
+
+U8* align_up_p(U8* p, U64 alignment)
+{
+  U64 p_address = (U64)p;
+  U64 p_address_aligned = align_up(p_address, alignment);
+  U8* aligned_p = (U8*)p_address_aligned;
+  return aligned_p; 
+}
+
 
 #endif
 

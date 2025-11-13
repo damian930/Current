@@ -108,7 +108,7 @@ int main()
   Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 52, Str8FromClit(font_arena, FONT_PATH));
   
   Win32_window* window = 0;
-  DefereLoop(DEBUG_win32_init(), DEBUG_win32_release())
+  DefereLoop(os_win32_init(), os_win32_release())
   DefereLoop(win32_gfx_init(), win32_gfx_release())
   DefereLoop(window = win32_create_window(), win32_close_window(window)) 
   DefereLoop(r_gl_win32_state_init(), r_gl_win32_state_release()) 
@@ -152,16 +152,34 @@ int main()
 
           // local B32 is_draw = false;
 
+          auto row_test = [](const char* id, Color color, const char* app_name, const char* time) {
+            ui_h_stack(id)
+            {
+              // TODO: These dont work at all
+              ui_set_max_size(800, Axis2_x);
+              ui_set_min_size(300, Axis2_x);
+
+              ui_set_backgound_color(color);
+              ui_label(app_name, id);
+              ui_spacer();
+              ui_label(time, id);
+
+              if(ui_is_clicked())
+              {
+                printf("%s \n", app_name);
+              }
+            }
+          };
+
           ui_begin_build();
           {
             
-            ui_h_stack("H stack id")
+            ui_v_stack("V stack id")
             {
-              ui_set_backgound_color(C_LIGHT_GREEN);
-              ui_label("Telegram", "Telegram label id");
-              ui_spacer();
-              ui_label("2:55", "Time id");
-
+              row_test("1", C_LIGHT_GREEN, "Telegram", "2:55");
+              row_test("2", C_BROWN, "Fortnite", "3:14");
+              row_test("3", C_LIGHT_GREEN, "The finals", "1:15");
+              row_test("4", C_BROWN, "Hearthstone", "4:12");
             }
 
 

@@ -1,13 +1,16 @@
 #ifndef WIN32_CORE_H
 #define WIN32_CORE_H
 
-#include <windows.h>
-
 #include "base/core.h"
 #include "base/string.h"
 #include "base/arena.h"
 
-// TODO: Mem commit / release / free / protect
+#include <windows.h>
+
+struct OS_Win32_mem_reserve_result {
+  U8* mem;
+  U64 size;
+};
 
 enum File_access_flags : U32 {
   File_access_flag_read        = (1 << 0),
@@ -18,160 +21,73 @@ enum File_access_flags : U32 {
   File_access_flag_share_write = (1 << 5),
 };
 
-struct Win32_error {
-  Win32_error* prev;
-  Win32_error* next;
-  Str8 note;
+struct OS_Win32_file_data {
+  SYSTEMTIME creation_time;
+  SYSTEMTIME last_access_time;
+  SYSTEMTIME last_write_time;
+  U64 size;
 };
 
-struct Win32_error_stack {
-  Win32_error* first;
-  Win32_error* last;
-  U64 error_count;
-};
-
-struct Win32_file {
+struct OS_Win32_file {
   HANDLE handle;
 };
 
-// NOTE: Static data for win32 
-struct DEBUG_win32_state {
+// Damian: Usually when i have layers and states for them i like to allocated them on their own lifetime.
+//         I need an allocated for that (Arena). But i cant do it here, since i need a way to allocate.
+//         I dont have that ability yet, before i have initialised the os_core layer.
+//         I could use malloc for it, but for now i dont. State only has static values either way (at least for now).
+struct OS_Win32_state
+{
   F64 performance_freq_per_sec;
+  U32 page_size;
+  U32 allocation_granularity;
 };
 
-// TODO: Move this to a better place
-global DEBUG_win32_state g_win32_state = {}; 
-void DEBUG_win32_init()
-{
-  // Performace freq
-  {
-    LARGE_INTEGER lr = {};
-    QueryPerformanceFrequency(&lr);
-    g_win32_state.performance_freq_per_sec = (F64)lr.QuadPart;
-  }
-}
+global OS_Win32_state g_os_win32_state = {};
 
-void DEBUG_win32_release()
-{
-  // Nothing here for
-}
+// State
+void os_win32_init();
+void os_win32_release();
 
-F64 get_monotonic_time()
-{
-  // TODO: see if testing for the win32 state init needed here
+// Memory
+// TODO: Alignment for allocations
+OS_Win32_mem_reserve_result os_win32_mem_reserve(U64 base_address, U64 size_to_reserve);
+U64 os_win32_mem_commit(U8* base_address_of_regioun_to_commit, U64 size_to_commit);
+void os_win32_mem_release(U8* reserved_region_base_address);
+#if OS_PROTECT
+void os_win32_mem_protect(U8* base_address_of_region_to_protect, U64 size_to_protect);
+#endif
 
-  F64 perf_counter = 0;
-  {
-    LARGE_INTEGER lr = {};
-    QueryPerformanceCounter(&lr);
-    perf_counter = (F64)lr.QuadPart;
-  }
+// Time
+F64 os_win32_get_monotonic_time();
 
-  F64 time_in_sec = perf_counter / g_win32_state.performance_freq_per_sec;
-  return time_in_sec;
-}
+// Files
+OS_Win32_file os_win32_file_open(Str8 file_path, U32 access_flags);
+void os_win32_file_close(OS_Win32_file file);
+B32 os_win32_file_is_valid(OS_Win32_file file);
+Data_buffer os_win32_file_read(Arena* arena, OS_Win32_file file);
+Data_buffer os_win32_file_read_inplace(Arena* arena, Str8 file_path);
+void os_win32_file_write(OS_Win32_file file, Data_buffer buffer);
+void os_win32_file_delete(Str8 file_name);
+OS_Win32_file_data os_win32_file_data(OS_Win32_file file);
 
-// TODO: If this is usefull and tested, then make this more formal
-void win32_fata_error(const char* message)
-{
-  // MessageBoxA(Null, message, "Error", MB_ICONEXCLAMATION);
-  ExitProcess(0);
-}
+// #define DefereFileLoop(var_name, file_name, file_flags) \
+//   OS_Win32_file file_name = os_win32_file_open(file_name, file_flags);
 
-// TODO: Add error hadeling here
-Win32_file open_file(Str8 file_path, U32 access_flags)
-{
-  Scratch scratch = get_scratch();
+// Thread context
+#define NumberOfScratchArenas 2
+extern Arena* scratch_arenas[NumberOfScratchArenas];  
+extern U32 current_scratch_index;
 
-  DWORD desired_access = 0;
-  if (access_flags & File_access_flag_read) { desired_access |= GENERIC_READ; }
-  if (access_flags & File_access_flag_write) { desired_access |= GENERIC_WRITE; }
-  if (access_flags & File_access_flag_execute) { desired_access |= GENERIC_EXECUTE; }
-  if (access_flags & File_access_flag_append) { desired_access |= GENERIC_WRITE; }
-  
-  DWORD share_mode = 0;
-  if (access_flags & File_access_flag_share_read) { share_mode |= FILE_SHARE_READ; }
-  if (access_flags & File_access_flag_share_write) { share_mode |= FILE_SHARE_WRITE; } 
+typedef Temp_arena Scratch;
+Scratch get_scratch();
+void end_scratch(Scratch* scratch);
 
-  DWORD creation_parameters = 0;
-  if (access_flags & File_access_flag_append) { creation_parameters = OPEN_ALWAYS; }
+// Manuall exit strategies
+void os_win32_exit(U32 exit_code);  
+void os_win32_display_fatal_error(const char* error_title, const char* error_text);
 
-  if (access_flags & File_access_flag_read) { creation_parameters = OPEN_EXISTING; }
-  if (access_flags & File_access_flag_write) { creation_parameters = CREATE_NEW; } // Truncated if exists
-  if (access_flags & File_access_flag_append) { creation_parameters = OPEN_ALWAYS; } // Doesnt truncate
 
-  Str8 file_path_null_term = str8_from_str8_temp_null_term(scratch.arena, file_path);
-
-  HANDLE file_handle = CreateFileA((CHAR *)file_path_null_term.data, 
-                                   desired_access, 
-                                   share_mode,
-                                   Null,
-                                   creation_parameters,
-                                   FILE_ATTRIBUTE_NORMAL,
-                                   NULL);
-  // TODO: Do something when it fails
-  Assert(file_handle != INVALID_HANDLE_VALUE);
-  
-  end_scratch(&scratch);
-
-  Win32_file file = {};
-  file.handle = file_handle; 
-
-  return file;
-}
-
-void close_file(Win32_file file)
-{
-  CloseHandle(file.handle);
-  file.handle = INVALID_HANDLE_VALUE;
-}
-
-Data_buffer read_file(Arena* arena, Win32_file file)
-{
-  SetFilePointerEx(file.handle, LARGE_INTEGER{}, Null, FILE_BEGIN);
-
-  U64 file_size = {};
-  {
-    LARGE_INTEGER lr = {};
-    GetFileSizeEx(file.handle, &lr);
-    file_size = lr.QuadPart;
-  }
-
-  Data_buffer buffer = {};
-  buffer.count = file_size;
-  buffer.data = ArenaPushArr(arena, U8, file_size);
-
-  // TODO: see if dword is the same as u32
-  U32 bytes_read = 0;
-  ReadFile(file.handle, buffer.data, file_size, (unsigned long*)&bytes_read, Null);
-
-  return buffer;
-}
-
-// TODO: This will be the things that is then constructed of the general(default) os specific things
-Data_buffer read_file_inplace(Arena* arena, Str8 file_path)
-{
-  Win32_file file = open_file(file_path, File_access_flag_read);
-  Data_buffer file_data = read_file(arena, file);
-  close_file(file);
-  return file_data;
-}
-
-void write_to_file(Win32_file file, Data_buffer buffer)
-{
-  SetFilePointerEx(file.handle, LARGE_INTEGER{}, Null, FILE_BEGIN);
-
-  U32 bytes_writen = 0;
-  WriteFile(file.handle, buffer.data, buffer.count, (unsigned long*)&bytes_writen, NULL);
-}
-
-void delete_file(Str8 file_name)
-{
-  Scratch scratch = get_scratch();
-  Str8 file_name_nt = str8_from_str8_temp_null_term(scratch.arena, file_name);
-  DeleteFileA((const CHAR*)file_name_nt.data);
-  end_scratch(&scratch);
-}
 
 
 #endif

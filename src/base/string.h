@@ -16,15 +16,18 @@ Data_buffer data_buffer_make(Arena* arena, U64 size);
 
 U64 cstr_len(const char* name);
 
-// Damian: These also temporarily null terminate
+// Damian: These null terminate until the next allocation on the same arena (See impl)
 Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len);
 Str8 str8_from_cstr(Arena* arena, const char* cstr);
 Str8 str8_from_str8(Arena* arena, Str8 str8);
 
-// TODO: Might have to remove these if they are of no use
-Str8 str8_from_cstr_len_temp_null_term(Arena* arena, const char* cstr, U64 len);
-Str8 str8_from_cstr_temp_null_term(Arena* arena, const char* cstr);
-Str8 str8_from_str8_temp_null_term(Arena* arena, Str8 str8);
+// Damian: Fast pass str maker, string is valid until the next time scratch is used.
+//         These are mosly for debug uses where str8 are kind require more code than i would like.
+//         Usage of these is to be minimized to local controlled situations or for debugging.
+Str8 str8_temp_from_cstr(const char* cstr);
+Str8 str8_temp_from_str8(Str8 other);
+
+// Here add some temporal things for strings
 
 #define Str8FromClit(arena_p, clit)              str8_from_cstr_len(arena_p, clit, ArrayCount(clit) - 1)
 #define Str8FromClit_TempNullTerm(arena_p, clit) str8_from_cstr_len_temp_null_term(arena_p, clit, ArrayCount(clit) - 1)

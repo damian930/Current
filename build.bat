@@ -1,6 +1,6 @@
 @echo off
 
-:: Damian: This is here, just cause i cant memoryse the cloc flag to remove the folder
+:: Damian: This is here, just cause i cant memorise the cloc flag to remove the folder
 :: cloc src --exclude-dir=third_party
 
 setlocal enabledelayedexpansion
@@ -41,11 +41,12 @@ if "%release%"=="1" (
 )
 
 :: NOTE: In the bat, when using if statements, the '(' has to be on the same line as the if stmt.
-if "%sample%"=="1" (
+if "%samples%"=="1" (
   echo [sample_build]
   pushd "src/_samples_"
   (
-    if "%text_loading%"=="1" cl /nologo /I ../ /Zi text_loading.cpp 
+    if "%text_loading%"=="1" echo [text_loading] & cl /nologo /I ../ /Zi text_loading.cpp 
+    if "%os_mem%"=="1" echo [os_mem] & cl /nologo /I ../ /Zi os_mem.cpp 
     erase *.obj
     erase *.ilk
   )

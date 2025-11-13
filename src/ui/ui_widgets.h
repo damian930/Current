@@ -52,9 +52,10 @@ void ui_spacer()
                                                 key, UI_box_flag__NONE, C_TRANSPARENT, ""), \
                                    ui_end_box())
 
-
-
-
+#define ui_v_stack(key) DefereLoop(ui_begin_box(UI_SizeChildrenSum(), UI_SizeFitTheParent(), \
+                                                Axis2_y, \
+                                                key, UI_box_flag__NONE, C_TRANSPARENT, ""), \
+                                   ui_end_box())
 
 
 
