@@ -266,8 +266,22 @@ void r_gl_win32_begin_frame()
   {
     Assert(arena_is_clear(window->frame_event_arena));
     Assert(window->frame_event_list == 0);
+    Assert(window->frame_final_mouse_pos == 0);
     window->frame_event_list = ArenaPush(window->frame_event_arena, Event_list);
+    window->frame_final_mouse_pos = ArenaPush(window->frame_event_arena, Vec2);
     win32_handle_messages(window);
+
+    // TODO: Think about this here, do we need it, this was just added cause i needed it 
+    *window->frame_final_mouse_pos = window->last_frame_final_mouse_pos;
+    for (Event_node* node = window->frame_event_list->last; node != 0; node = node->prev)
+    {
+      if (node->event.type == Event_type_mouse)
+      {
+        *window->frame_final_mouse_pos = vec2_f32((F32)node->event.mouse_x, (F32)node->event.mouse_y); 
+        break;
+      }
+    }
+
   }
 
   // Renderer per frame stuff
@@ -324,7 +338,7 @@ void r_gl_win32_end_frame()
       DEV_draw_rect_list(node);
     }
   }
-  
+
   // Enforce fps
   {
     F64 frame_time = 1.0 / r_gl_win32_get_frame_rate();
@@ -340,8 +354,12 @@ void r_gl_win32_end_frame()
   // Clear per frame state: Window
   {
     Win32_window* window = g_win32_gl_renderer->window;
-    window->frame_event_list = 0;
+    
+    window->last_frame_final_mouse_pos = *window->frame_final_mouse_pos;
+
     arena_clear(window->frame_event_arena);
+    window->frame_event_list = 0;
+    window->frame_final_mouse_pos = 0;
   }
 
   // Clear per frame state: Renderer

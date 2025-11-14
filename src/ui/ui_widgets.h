@@ -4,6 +4,8 @@
 #include "ui_core.h"
 #include "ui_core.cpp"
 
+#if 0
+
 void ui_label(const char* str, const char* key)
 {
   ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, key, UI_box_flag__has_text, C_TRANSPARENT, str);
@@ -70,7 +72,7 @@ void ui_spacer()
 
 
 
-
+#endif 
 
 
 

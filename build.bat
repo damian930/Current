@@ -78,7 +78,8 @@ pushd %out_dir_name%
                             %compiler_macro_UNICODE%
 
     set compile_warning_to_suppress=/wd4201 ^
-                                    /wd4189 
+                                    /wd4189 ^
+                                    /wd4996
 
     cl /nologo /Zi /MDd /EHsc /W4 %compile_time_values% %forder_to_include% %compile_warning_to_suppress% %source_files_to_compile% ^
       /link %libs_to_link_with%
@@ -86,6 +87,7 @@ pushd %out_dir_name%
   :: Notes on suppressed warning:
   :: C4201 --> nonstandard extension used: nameless struct/union
   :: C4189 --> local variable is initialized but not referenced
+  :: C4996 --> function is deprecated (this is for stb stuff)
 popd  
 
 

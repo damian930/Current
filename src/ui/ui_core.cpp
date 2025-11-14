@@ -42,7 +42,6 @@ void ui_state_init(Win32_window* window, Font_info* font_info)
   g_ui_state->perm_state_arena = arena;
   g_ui_state->window = window;
   g_ui_state->font_info = font_info;
-  // g_ui_state->font_texture = font_texture;
 
   g_ui_state->current_arena_index = 0;
   g_ui_state->ui_tree_build_arenas[0] = arena_alloc(Kilobytes_U64(64), "UI tree build arena 1");
@@ -128,11 +127,8 @@ UI_Box* ui_allocate_box_helper(
   UI_size size_kind_x, 
   UI_size size_kind_y, 
   Axis2 alignment_axis,
-  
   const char* key,
-
   UI_box_flags flags,
-  Color backgound_color,
   const char* text
 ) {
   UI_Box* box = ArenaPush(arena, UI_Box);
@@ -141,16 +137,20 @@ UI_Box* ui_allocate_box_helper(
   box->semantic_size[Axis2_x] = size_kind_x;
   box->semantic_size[Axis2_y] = size_kind_y;
   box->alignment_axis = alignment_axis;
-
+  
   box->flags = flags;
-  if (flags & UI_box_flag__has_backgound)
-  {
-    box->backgound_color= backgound_color;
-  }
   if (flags & UI_box_flag__has_text)
   {
     box->text = str8_from_cstr(arena, text);
+    box->text_color = ui_current_text_color(); 
   }
+  if (flags & UI_box_flag__has_backgound)
+  {
+    box->backgound_color = ui_current_backgound_color();
+  }
+  
+  box->padding   = ui_current_padding();
+  box->child_gap = ui_current_child_gap();
 
   return box;
 }
@@ -165,6 +165,18 @@ void ui_begin_build()
   // TODO: I dont like this call here
   Rect ui_rect = win32_get_client_area_rect(g_ui_state->window);
 
+  g_ui_state->text_color_stack = ArenaPush(tree_arena, UI_text_color_stack);
+  ui_push_text_color(C_WHITE);
+  
+  g_ui_state->background_color_stack = ArenaPush(tree_arena, UI_background_color_stack);
+  ui_push_background_color(C_BLACK);
+  
+  g_ui_state->padding_stack = ArenaPush(tree_arena, UI_padding_stack);
+  ui_push_padding(10);
+
+  g_ui_state->child_gap_stack = ArenaPush(tree_arena, UI_child_gap_stack);
+  ui_push_child_gap(5);
+
   UI_box_flags root_flags = UI_box_flag__has_backgound;
   UI_Box* new_root = ui_allocate_box_helper(tree_arena, 
                                             UI_SizePx(ui_rect.width), 
@@ -172,24 +184,17 @@ void ui_begin_build()
                                             Axis2_x, 
                                             "ROOT_KEY_FOR_UI",
                                             root_flags,
-                                            C_TRANSPARENT,
-                                            ""
-                                            );
+                                            "");
   g_ui_state->root = new_root;
   g_ui_state->current_parent = new_root;
-
-  g_ui_state->padding_stack = ArenaPush(tree_arena, UI_padding_stack);
-  ui_push_padding(25);
-
-  g_ui_state->child_gap_stack = ArenaPush(tree_arena, UI_child_gap_stack);
-  ui_push_child_gap(10);
 }
 
 void ui_end_build()
 {
   // Nothing here for now, ui is only valid for a single build
-
 }
+
+#define UI_Key(value) #value
 
 UI_Box* ui_begin_box(
   UI_size size_kind_x, 
@@ -197,7 +202,6 @@ UI_Box* ui_begin_box(
   Axis2 alignment_axis, 
   const char* key,
   UI_box_flags flags,
-  Color color,
   const char* c_str
 ) {
   UI_Box* new_box = ui_allocate_box_helper(ui_current_build_arena(), 
@@ -206,7 +210,6 @@ UI_Box* ui_begin_box(
                                            alignment_axis, 
                                            key,
                                            flags,
-                                           color, 
                                            c_str);
   DllPushBack(g_ui_state->current_parent, new_box);
   g_ui_state->current_parent->children_count += 1;
@@ -308,15 +311,15 @@ void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
         }
       }
 
-      if (root->has_min_size[axis] && total_size_on_axis < root->min_size[axis])
-      {
-        total_size_on_axis = root->min_size[axis];
-      }
+      // if (root->has_min_size[axis] && total_size_on_axis < root->min_size[axis])
+      // {
+      //   total_size_on_axis = root->min_size[axis];
+      // }
 
-      if (root->has_max_size[axis] && total_size_on_axis > root->max_size[axis])
-      {
-        total_size_on_axis = root->max_size[axis];
-      }
+      // if (root->has_max_size[axis] && total_size_on_axis > root->max_size[axis])
+      // {
+      //   total_size_on_axis = root->max_size[axis];
+      // }
 
       root->computed_sizes[axis] = total_size_on_axis;
 
@@ -447,7 +450,6 @@ void ui_layout_pass(UI_Box* root, Axis2 axis)
 }
 
 // ---
-
 
 void ui_final_pos_pass(UI_Box* root)
 {
@@ -598,6 +600,122 @@ void ui_equip_font_texture(Texture2D font_texture)
 }
 
 ///////////////////////////////////////////////////////////
+// Damian: Inputs
+//
+UI_Box* ui_box_from_key_opt(UI_Box* root, Str8 key)
+{
+  UI_Box* result = 0;
+  if (str8_match(root->key, key, Str8_match_flag_NONE))
+  {
+    result = root;
+  }
+
+  if (!result)
+  {
+    for (UI_Box* child = root->first; child != 0; child = child->next)
+    {
+      result = ui_box_from_key_opt(child, key);
+      if (result)
+      {
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+/* NOTES:
+  Kind of inputs i need:
+  - Final mouse pos
+  -
+*/
+
+UI_Inputs ui_get_inputs()
+{
+  UI_Inputs inputs = {};
+
+  UI_Box* current = g_ui_state->current_parent;
+  UI_Box* prev_root = g_ui_state->prev_frame_root;
+  
+  if (prev_root)
+  {
+    UI_Box* prev_current = ui_box_from_key_opt(prev_root, current->key);
+    UI_Inputs prev_inputs = prev_current->inputs; 
+    inputs = prev_inputs;
+
+    if (prev_current)
+    {
+      Rect rect = prev_current->computed_final_rect;
+
+      // Reseting the clicked from the prev frame
+      inputs.is_clicked = false;
+
+      // Is hovered 
+      {
+        Vec2 mouse_pos = g_ui_state->window->last_frame_final_mouse_pos;
+        if (rect_does_intersect_with_point(rect, mouse_pos)) {
+          inputs.is_hovered = true;
+        } else {
+          inputs.is_hovered = false;
+        }
+      }
+
+      // Is pressed
+      {
+        Event_list* list = g_ui_state->window->frame_event_list;
+        for (Event_node* node = list->first; node != 0; node = node->next)
+        {
+          Event* event = &node->event;
+          if (   event->type == Event_type_mouse 
+              && event->mouse_key_pressed == Mouse_key_left
+          ) {
+            Vec2 mouse_pos = vec2_f32((F32)event->mouse_x, (F32)event->mouse_y);
+            if (rect_does_intersect_with_point(rect, mouse_pos))
+            {
+              inputs.is_pressed_left = true;
+              break;
+            }   
+          }
+        }
+      }
+
+      // Did get unpressed
+      if (inputs.is_pressed_left)
+      {
+        Event_list* list = g_ui_state->window->frame_event_list;
+        for (Event_node* node = list->first; node != 0; node = node->next)
+        {
+          Event* event = &node->event;
+          if (   event->type == Event_type_mouse 
+              && event->mouse_key_released == Mouse_key_left
+          ) {
+            inputs.is_pressed_left = false;
+            break;
+          }
+        }
+      }
+
+      // Did get clicked
+      if (!inputs.is_pressed_left && prev_inputs.is_pressed_left)
+      {
+        inputs.is_clicked = true;
+      }
+      
+      current->inputs = inputs;
+    }
+
+  }
+
+  // local U64 frame_counter = 0;
+  // printf("Frame: %lld --> %s \n", frame_counter++, (inputs.is_pressed_left ? "Pressed" : "Up"));
+
+  return inputs;
+}
+
+
+
+///////////////////////////////////////////////////////////
 // Damian: THESE ARE JUST SOME EXTRA THINGS I AM TESTING AND DONT WANT TO PUT IN OTHER FUNCS FOR NOW 
 //
 void ui_draw_padding_for_current(Color padding_color)
@@ -612,31 +730,20 @@ void ui_draw_child_gap_color(Color gap_color)
   g_ui_state->current_parent->child_gap_color = gap_color;
 }
 
-void ui_set_text_color(Color color)
-{
-  g_ui_state->current_parent->text_color = color;
-}
+// void ui_set_min_size(F32 size, Axis2 axis)
+// {
+//   UI_Box* box = g_ui_state->current_parent;
+//   box->min_size[axis] = size;
+//   box->has_min_size[axis] = true;
+// }
 
-void ui_set_min_size(F32 size, Axis2 axis)
-{
-  UI_Box* box = g_ui_state->current_parent;
-  box->min_size[axis] = size;
-  box->has_min_size[axis] = true;
-}
+// void ui_set_max_size(F32 size, Axis2 axis)
+// {
+//   UI_Box* box = g_ui_state->current_parent;
+//   box->max_size[axis] = size;
+//   box->has_max_size[axis] = true;
+// }
 
-void ui_set_max_size(F32 size, Axis2 axis)
-{
-  UI_Box* box = g_ui_state->current_parent;
-  box->max_size[axis] = size;
-  box->has_max_size[axis] = true;
-}
-
-void ui_set_backgound_color(Color color)
-{
-  UI_Box* box = g_ui_state->current_parent;
-  box->flags = (UI_box_flags)(box->flags | UI_box_flag__has_backgound);
-  box->backgound_color = color; 
-}
 
 
 

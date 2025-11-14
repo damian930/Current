@@ -13,10 +13,10 @@
 #include "base/math.cpp"
 
 // -------------------------
-enum Key_state {
-  Key_state_up,
-  Key_state_down,
-};
+// enum Key_state {
+//   Key_state_up,
+//   Key_state_down,
+// };
 
 enum Key {
   Key_NONE,
@@ -45,6 +45,9 @@ enum Mouse_key {
   Mouse_key_COUNT,
 };
 
+// TODO: I have made a mistacke where i was trying to get keyboard inputs for mouse,
+//       cause they are inside the same struct and names are similar,
+//       fix that, make it now happen
 // TODO: Change some of these S32 to S16
 struct Event {
   Event_type type;
@@ -90,6 +93,10 @@ struct Win32_window {
   // Per frame stuff
   Arena* frame_event_arena;
   Event_list* frame_event_list;
+  Vec2* frame_final_mouse_pos;
+
+  // TODO: Thinkg about this here, this was just added cause i needed it
+  Vec2 last_frame_final_mouse_pos;
 };
 
 struct Win32_gfx_state {

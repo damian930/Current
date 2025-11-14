@@ -1,4 +1,4 @@
-#ifndef OS_GFX_WIN32_CPP
+  #ifndef OS_GFX_WIN32_CPP
 #define OS_GFX_WIN32_CPP
 
 #include "os_gfx_win32.h"
@@ -343,7 +343,9 @@ LRESULT CALLBACK WndProc(HWND window_handle, UINT message, WPARAM w_param, LPARA
       event.type = Event_type_mouse;
       event.mouse_x = x;
       event.mouse_y = y;
-      if (message_type == Message_type_up) { event.mouse_key_released = mouse_key; }
+      if (message_type == Message_type_up) { 
+        event.mouse_key_released = mouse_key; 
+      }
       else if (message_type == Message_type_down) { event.mouse_key_pressed = mouse_key; }
       else if (message_type == Message_type_move) {   };
       

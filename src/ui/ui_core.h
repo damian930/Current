@@ -38,6 +38,13 @@ enum UI_box_flags : U32 {
   UI_box_flag__draw_child_gap  = (1 << 4),
 };
 
+// TESTING STUFF IN HERE
+struct UI_Inputs {
+  B32 is_hovered;
+  B32 is_pressed_left;
+  B32 is_clicked;
+};
+
 struct UI_Box {
   UI_Box* parent;
   UI_Box* first;
@@ -58,18 +65,21 @@ struct UI_Box {
   Color backgound_color;
   Color padding_color;
   Color child_gap_color;
-  // F32 padding;
-  // F32 child_gap;
+  
+  F32 padding;
+  F32 child_gap;
 
-  B32 has_min_size[Axis2_COUNT];
-  B32 has_max_size[Axis2_COUNT];
-  F32 min_size[Axis2_COUNT];
-  F32 max_size[Axis2_COUNT];
+  // B32 has_min_size[Axis2_COUNT];
+  // B32 has_max_size[Axis2_COUNT];
+  // F32 min_size[Axis2_COUNT];
+  // F32 max_size[Axis2_COUNT];
 
   // Sizing pass data
   F32 computed_sizes[Axis2_COUNT];
   F32 computed_parent_rel_pos[Axis2_COUNT];
   Rect computed_final_rect;
+
+  UI_Inputs inputs;
 };
 
 struct UI_state {
@@ -88,6 +98,8 @@ struct UI_state {
   // Prev frame tree
   UI_Box* prev_frame_root;
 
+  UI_text_color_stack* text_color_stack;
+  UI_background_color_stack* background_color_stack;
   UI_padding_stack* padding_stack;
   UI_child_gap_stack* child_gap_stack;
 };
@@ -109,20 +121,24 @@ void ui_state_init(Win32_window* window, Font_info* font_info);
 void ui_state_release();
 
 // DEBUG Input stuff
-UI_Box* ui_get_box_with_key_opt(UI_Box* root, Str8 key);
-B32 test_inputs_for_box(UI_Box* box);
-B32 ui_is_clicked();
+
+
+// UI_Box* ui_get_box_with_key_opt(UI_Box* root, Str8 key);
+// B32 test_inputs_for_box(UI_Box* box);
+// B32 ui_is_clicked();
+
+
 
 // UI element creation stuff
 UI_Box* ui_allocate_box_helper(Arena* arena, 
                                UI_size size_kind_x, UI_size size_kind_y, Axis2 alignment_axis, 
                                const char* key, UI_box_flags flags, 
-                               Color backgound_color,const char* text);
+                               const char* text);
 void ui_begin_build();
 void ui_end_build();
 UI_Box* ui_begin_box(UI_size size_kind_x, UI_size size_kind_y, Axis2 alignment_axis, 
                      const char* key, UI_box_flags flags,
-                     Color color, const char* c_str);
+                     const char* c_str);
 void ui_end_box();
 
 // UI sizing/layout/pos stuff

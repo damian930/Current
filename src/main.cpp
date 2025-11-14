@@ -52,10 +52,10 @@ void EntryPoint()
   #define FONT_PATH "../data/Roboto-Regular.ttf"
   Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 52, Str8FromClit(font_arena, FONT_PATH));
 
-  for (Font_kern_node* node = font_info->kern_list.first; node != 0; node = node->next)
-  {
-    printf("(%c), (%c), (%f) \n", node->kern_pair.codepoint1, node->kern_pair.codepoint2, node->kern_pair.advance);
-  }
+  // for (Font_kern_node* node = font_info->kern_list.first; node != 0; node = node->next)
+  // {
+    // printf("(%c), (%c), (%f) \n", node->kern_pair.codepoint1, node->kern_pair.codepoint2, node->kern_pair.advance);
+  // }
 
   Win32_window* window = 0;
   DefereLoop(window = win32_create_window(), win32_close_window(window)) 
@@ -73,9 +73,29 @@ void EntryPoint()
         {
           DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
           {
-            draw_rect(rect_make(0, 0, 1000, 1000), C_LIGHT_GREEN);
-            test_draw_text(font_info, font_texture, str8_temp_from_cstr("Flopper 7$ test"), 0, 0, C_GREY); 
+            DefereLoop(ui_begin_build(), ui_end_build())
+            {
+              ui_push_background_color(C_LIGHT_GREEN);
+              ui_begin_box(UI_SizePx(500), UI_SizePx(500), Axis2_y, "Main key", UI_box_flag__has_backgound, "");
+              {
+                local B32 is_menu_open = false;
+                if (ui_get_inputs().is_clicked)
+                {
+                  ToggleBool(is_menu_open);
+                }
+                
+                if (is_menu_open)
+                {
+                  ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, UI_Key(__LINE__), UI_box_flag__has_text, "Text");
+                  {}
+                  ui_end_box();
+                }
+              }
+              ui_end_box();
+            }
+            ui_draw_ui();
           }
+
         }
         
       }
