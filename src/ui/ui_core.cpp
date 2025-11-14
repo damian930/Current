@@ -90,7 +90,7 @@ B32 test_inputs_for_box(UI_Box* box)
     Event* event = &node->event;
 
     if (   event->mouse_key_pressed 
-        && rect_does_intersect_with_point(box->computed_final_rect, vec2_f32(event->mouse_x, event->mouse_y))
+        && rect_does_intersect_with_point(box->computed_final_rect, vec2_f32((F32)event->mouse_x, (F32)event->mouse_y))
     ) {
       result = true;
       DllPopNode(os_event_list, node);
@@ -499,7 +499,8 @@ void ui_draw_ui_helper(UI_Box* root)
       g_ui_state->font_texture, 
       root->text, 
       root->computed_final_rect.x,
-      root->computed_final_rect.y);
+      root->computed_final_rect.y,
+      root->text_color);
     
     #if 0
     test_draw_text_lines(
@@ -609,6 +610,11 @@ void ui_draw_child_gap_color(Color gap_color)
 {
   g_ui_state->current_parent->flags = (UI_box_flags)(g_ui_state->current_parent->flags | UI_box_flag__draw_child_gap);
   g_ui_state->current_parent->child_gap_color = gap_color;
+}
+
+void ui_set_text_color(Color color)
+{
+  g_ui_state->current_parent->text_color = color;
 }
 
 void ui_set_min_size(F32 size, Axis2 axis)

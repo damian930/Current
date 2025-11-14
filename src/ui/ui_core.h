@@ -54,6 +54,7 @@ struct UI_Box {
   // Extra features
   UI_box_flags flags;
   Str8 text;
+  Color text_color;
   Color backgound_color;
   Color padding_color;
   Color child_gap_color;

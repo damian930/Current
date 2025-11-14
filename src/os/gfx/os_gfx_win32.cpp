@@ -101,10 +101,10 @@ Rect _win32_get_client_arena_rect(Win32_window* window)
   RECT rect = {};
   GetClientRect(window->handle, &rect);
   Rect result = {};
-  result.x = rect.right;
-  result.y = rect.top;
-  result.width = rect.right - rect.left;
-  result.height = rect.bottom - rect.top;
+  result.x = (F32)rect.right;
+  result.y = (F32)rect.top;
+  result.width = (F32)rect.right - (F32)rect.left;
+  result.height = (F32)rect.bottom - (F32)rect.top;
   return result;
 }
 
@@ -115,8 +115,8 @@ Rect win32_get_client_area_rect(Win32_window* window)
   Rect result = {};
   result.x = 0;
   result.y = 0;
-  result.width = rect.right - rect.left;
-  result.height = rect.bottom - rect.top;
+  result.width = (F32)rect.right - (F32)rect.left;
+  result.height = (F32)rect.bottom - (F32)rect.top;
   return result;
 }
 
@@ -127,8 +127,8 @@ Rect win32_get_window_rect(Win32_window* window)
   Rect result = {};
   result.x = 0;
   result.y = 0;
-  result.width = rect.right - rect.left;
-  result.height = rect.bottom - rect.top;
+  result.width = (F32)rect.right - (F32)rect.left;
+  result.height = (F32)rect.bottom - (F32)rect.top;
   return result;
 }
 
@@ -367,11 +367,11 @@ LRESULT CALLBACK WndProc(HWND window_handle, UINT message, WPARAM w_param, LPARA
 
     case WM_MOUSEWHEEL:
     {
-      S32 wheen_rotation = (S16)HIWORD(w_param);
-      S32 other_mouse_keys_whitch_are_down = (S16)LOWORD(w_param);
+      S16 wheen_rotation = (S16)HIWORD(w_param);
+      S16 other_mouse_keys_whitch_are_down = (S16)LOWORD(w_param);
 
-      S32 x = (S16)LOWORD(l_param);
-      S32 y = (S16)HIWORD(l_param);
+      S16 x = (S16)LOWORD(l_param);
+      S16 y = (S16)HIWORD(l_param);
 
       is_event = true;
       event.mouse_x = x;

@@ -25,6 +25,8 @@
 #include "ui/ui_widgets.h"
 #include "ui/ui_widgets.cpp"
 
+// Damian: On November 14th the codebase had 4k lines, 700 comments, 1100 blanks.
+
 void EntryPoint();
 
 int main()
@@ -48,7 +50,12 @@ void EntryPoint()
   Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
   // #define FONT_PATH "../data/papyrus.ttf"
   #define FONT_PATH "../data/Roboto-Regular.ttf"
-  Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 400, Str8FromClit(font_arena, FONT_PATH));
+  Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 52, Str8FromClit(font_arena, FONT_PATH));
+
+  for (Font_kern_node* node = font_info->kern_list.first; node != 0; node = node->next)
+  {
+    printf("(%c), (%c), (%f) \n", node->kern_pair.codepoint1, node->kern_pair.codepoint2, node->kern_pair.advance);
+  }
 
   Win32_window* window = 0;
   DefereLoop(window = win32_create_window(), win32_close_window(window)) 
@@ -66,15 +73,15 @@ void EntryPoint()
         {
           DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
           {
-            draw_rect(rect_make(200, 200, 500, 500), C_LIGHT_GREEN);
-            test_draw_text(font_info, font_texture, str8_temp_from_cstr("255"), 200, 200); 
+            draw_rect(rect_make(0, 0, 1000, 1000), C_LIGHT_GREEN);
+            test_draw_text(font_info, font_texture, str8_temp_from_cstr("Flopper 7$ test"), 0, 0, C_GREY); 
           }
         }
         
       }
     }
   }
-}
+} 
 
 #define SCREEN_SHOT_DEMO 0
 #if SCREEN_SHOT_DEMO

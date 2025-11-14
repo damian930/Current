@@ -1,7 +1,7 @@
 @echo off
 
 :: Damian: This is here, just cause i cant memorise the cloc flag to remove the folder
-:: cloc src --exclude-dir=third_party
+:: cloc src --exclude-dir=third_party --by-file
 
 setlocal enabledelayedexpansion
 
@@ -77,9 +77,18 @@ pushd %out_dir_name%
     set compile_time_values=%compiler_macro_DEBUG_MODE% ^
                             %compiler_macro_UNICODE%
 
-    cl /nologo /Zi /MDd /EHsc  %compile_time_values% %forder_to_include% %source_files_to_compile% ^
+    set compile_warning_to_suppress=/wd4201 ^
+                                    /wd4189 
+
+    cl /nologo /Zi /MDd /EHsc /W4 %compile_time_values% %forder_to_include% %compile_warning_to_suppress% %source_files_to_compile% ^
       /link %libs_to_link_with%
+
+  :: Notes on suppressed warning:
+  :: C4201 --> nonstandard extension used: nameless struct/union
+  :: C4189 --> local variable is initialized but not referenced
 popd  
+
+
 
 cd %caller_path%
 

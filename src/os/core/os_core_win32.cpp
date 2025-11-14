@@ -192,7 +192,7 @@ Data_buffer os_win32_file_read(Arena* arena, OS_Win32_file file)
   while (bytes_read < file_size)
   {
     U32 bytes_read_this_it = {};
-    ReadFile(file.handle, buffer.data, file_size, (unsigned long*)&bytes_read_this_it, Null);
+    ReadFile(file.handle, buffer.data, (U32)file_size, (unsigned long*)&bytes_read_this_it, Null);
     bytes_read += bytes_read_this_it;
   }
   Assert(bytes_read == file_size);
@@ -216,7 +216,7 @@ void os_win32_file_write(OS_Win32_file file, Data_buffer buffer)
   while (bytes_written < buffer.count)
   {
     U64 bytes_written_this_it = 0;    
-    WriteFile(file.handle, buffer.data, buffer.count, (unsigned long*)&bytes_written_this_it, NULL);
+    WriteFile(file.handle, buffer.data, (U32)buffer.count, (unsigned long*)&bytes_written_this_it, NULL);
     bytes_written += bytes_written_this_it;
   }
   Assert(bytes_written == buffer.count);

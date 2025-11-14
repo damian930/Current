@@ -75,13 +75,13 @@ struct Rect {
   F32 height; 
 };
 
-// Damian: Max here is ussually used as the non equals bound
+// Damian: Max here is ussually used as the non inclusive bound
 struct Range_F32 {
   F32 min;
   F32 max;
 };
 
-// Damian: Max here is ussually used as the non equals bound
+// Damian: Max here is ussually used as the non inclusive bound
 struct Range_U32 {
   U32 min;
   U32 max;
@@ -162,6 +162,7 @@ Rect rect_from_center(F32 x, F32 y, F32 width, F32 height);
 Rect rect_from_center_vec(Vec2_F32 center_point, F32 width, F32 height);
 Rect rect_from_points(F32 x1, F32 y1, F32 x2, F32 y2);
 Rect rect_from_points_vec(Vec2_F32 p1, Vec2_F32 p2);
+Rect rect_from_bbox(Bounding_box b_box);
 Vec2_F32 rect_pos(Rect rect);
 Vec2_F32 rect_dims(Rect rect);
 B32 rect_does_intersect_with_point(Rect rect, Vec2_F32 p);
@@ -191,6 +192,7 @@ U8* align_up_p(U8* p, U64 alignment);
 // Damian: Colors
 typedef Vec4_F32 Color;
 
+// TODO: Remove C_ from there names, i added it to not have name conflics with drawing api for windows
 #define C_TRANSPARENT vec4_f32(0.0f, 0.0f, 0.0f, 0.0f)
 #define C_BLACK       vec4_f32(0.0f, 0.0f, 0.0f, 1.0f)
 #define C_WHITE       vec4_f32(1.0f, 1.0f, 1.0f, 1.0f)

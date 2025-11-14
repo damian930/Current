@@ -1,9 +1,10 @@
 #ifndef D_FONT_CPP
 #define D_FONT_CPP
 
-// TODO: Remove this
-// #define STB_IMAGE_WRITE_IMPLEMENTATION
-// #include "third_party/stb/stb_image_write.h"
+#ifndef STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+  #include "third_party/stb/stb_image_write.h"
+#endif
 
 // #include "other/image_stuff/image_loader.cpp"
 
@@ -62,12 +63,15 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints,
     stbtt_PackFontRanges(&pc, ttf_data.data, 0, &ranges, 1);
     stbtt_PackEnd(&pc);
     Assert(is_succ);
-    
+
+    #if DEBUG_MODE 
+    stbi_write_png("font_atlas_test.png", font_atlas.width, font_atlas.height, 1, font_atlas.data_buffer.data, 0);
+    #endif
     // Storing the data for the font 
     result_font_info->font_atlas = font_atlas;
     result_font_info->font_size = font_size;
 
-    F32 scale = stbtt_ScaleForPixelHeight(&font_info, font_size);
+    F32 scale = stbtt_ScaleForPixelHeight(&font_info, (F32)font_size);
     result_font_info->scale = scale; 
     
     {
@@ -80,7 +84,7 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints,
       result_font_info->line_gap = (F32)linegap * scale;
     }
 
-    // Codepoint specific dat
+    // Codepoint specific data
     ForEachRangeU32(it_codepoint, range_of_codepoints)
     {
       F32 advance_width = {};
@@ -96,12 +100,11 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints,
 
       Bounding_box glyph_bbox = {};
       {
+        // TODO: Make sure that this funstion return x1 and y1 non inclusive style.
         int x0 = {};
         int y0 = {};
         int x1 = {};
         int y1 = {};
-        // TODO: Make sure that this funstion return x1 and y1 non inclusive style.
-        //       For 
         int succ = stbtt_GetCodepointBox(&font_info, it_codepoint, &x0, &y0, &x1, &y1);
         Assert(succ);
         glyph_bbox.x0 = scale * (F32)x0;
@@ -119,6 +122,8 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints,
       U32 codepoint_pached_data_index = it_codepoint - range_of_codepoints.min;
       stbtt_packedchar* codepoint_pached_data = glyph_metrics + codepoint_pached_data_index;
   
+      // TODO: I here use asci only, but we need to split U32 codepoint unicode id into separat U8 parts if we are using them
+      //       Leaving the compiler time warning for this no not forget.
       Font_codepoint_data_node* new_node = ArenaPush(arena, Font_codepoint_data_node);
       new_node->codepoint         = it_codepoint;
       new_node->advance_width     = advance_width;
@@ -203,22 +208,20 @@ Font_kern_pair* font_get_kern_pair_opt(Font_info* font_info, U8 codepoint1, U8 c
 Rect codepoint_rect_from_font(Font_info* font_info, U8 codepoint)
 {
   Font_codepoint_data_node* node = font_get_codepoint_node_opt(font_info, codepoint);
-  Rect source_rect = {};
+  Rect source_rect = {}; // Damian: Default source_rect in case codepoint is not supported
   source_rect.x = 0.0f;
   source_rect.y = 0.0f;
-  source_rect.width = font_info->max_advance_width;
+  source_rect.width = font_info->max_advance_width;  
   source_rect.height = font_info->ascent + Abs(F32, font_info->descent);
   if (node) {
-    source_rect.x = node->bb_on_atlas.x0;
-    source_rect.y = node->bb_on_atlas.y0;
-    source_rect.width = node->bb_on_atlas.x1 - node->bb_on_atlas.x0;
-    source_rect.height = node->bb_on_atlas.y1 - node->bb_on_atlas.y0;
+    source_rect = rect_from_bbox(node->bb_on_atlas);
   }
   return source_rect;
 }
 
 // TODO: I really dislike that nulls are possible here
 //       Maybe just have safe and unsafe versions ????
+#if 1 // TODO: Remove this if it doesnt get used ever (I commented it out on 14th of December)
 Rect codepoint_rect_from_data(Font_info* font_info, Font_codepoint_data_node* node)
 {
   Rect source_rect = {};
@@ -238,7 +241,7 @@ Rect codepoint_rect_from_data(Font_info* font_info, Font_codepoint_data_node* no
   }
   return source_rect;
 }
-
+#endif
 
 Vec2_F32 font_measure_text(Font_info* font_info, Str8 text)
 {
@@ -253,7 +256,7 @@ Vec2_F32 font_measure_text(Font_info* font_info, Str8 text)
     Font_codepoint_data_node* data = font_get_codepoint_node_opt(font_info, codepoint);
     if (data)
     {
-      result_width += data->left_side_bearing;
+      // result_width += data->left_side_bearing;
       result_width += data->advance_width;
       if (index < text.count - 1)
       {
@@ -308,10 +311,10 @@ Texture2D create_a_texture_from_font_atlas(Font_info* font_info)
         U32 byte = (U32)*image_byte;
         image_byte += 1;
         
-        *bitmap_pixel = ((byte << 24) |
-        (byte << 16) |
-        (byte << 8)  |
-        (byte << 0)  );
+        *bitmap_pixel = ((byte << 24) | // Alpha
+        (byte << 16) | // Blue
+        (byte << 8)  | // Green
+        (byte << 0)  ); // Red
         bitmap_pixel += 1;
       }
     }

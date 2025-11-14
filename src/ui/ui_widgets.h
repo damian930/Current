@@ -22,7 +22,7 @@ B32 ui_button(Color color, const char* text, const char* key, const char* text_k
   return is_pressed;
 }
 
-void ui_checkbox_entry(B32* b, U32* value, U32 value_on_pick, const char* text, const char* key)
+void ui_checkbox_entry(B32* b, U32* value, U32 value_on_pick, const char* key)
 {
   // Box, label
   Color color = (*b ? C_LIGHT_GREEN : C_BLUE);

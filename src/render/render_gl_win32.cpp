@@ -291,8 +291,8 @@ void r_gl_win32_begin_frame()
     **viewport_rect__top_left_to_bottom_right = win32_get_client_area_rect(window);
     **draw_list                               = DEBUG_draw_rect_list{};
 
-    U32 width  = (**viewport_rect__top_left_to_bottom_right).width;
-    U32 height = (**viewport_rect__top_left_to_bottom_right).height;
+    U32 width  = (U32)(**viewport_rect__top_left_to_bottom_right).width;
+    U32 height = (U32)(**viewport_rect__top_left_to_bottom_right).height;
     glViewport(0, 0, width, height); 
   }
 }
@@ -386,7 +386,7 @@ Texture2D load_texture(Image2D image)
 
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image.width, image.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image.data_buffer_opt.data);
   glBindTexture(GL_TEXTURE_2D, 0);  
-  // glGenerateMipmap(GL_TEXTURE_2D);
+  glGenerateMipmap(GL_TEXTURE_2D);
 
   Texture2D result = {};
   result.width = image.width;
@@ -420,6 +420,12 @@ void r_gl_debug_message_callback(GLenum source, GLenum type, GLuint id,
                                  GLenum severity, GLsizei length, 
                                  const GLchar *message, const void *userParam
 ) {
+  UnusedVar(source);
+  UnusedVar(type);
+  UnusedVar(id);
+  UnusedVar(severity);
+  UnusedVar(length);
+  UnusedVar(userParam);
   printf("GL error: \n");
   printf("%s \n", message);
   printf("\n");
@@ -457,11 +463,12 @@ void test_draw_texture_pro(
   node->texture = texture;
   node->texture_source_rect = texture_source_rect;
   node->texture_dest_rect = texture_dest_rect;
+  node->rect_color = color;
 
   DllPushBack(list, node);
   list->count += 1;
 
-  draw_rect(texture_dest_rect, color);
+  // draw_rect(texture_dest_rect, color);
 }
 
 void test_draw_texture_crop(
@@ -485,7 +492,9 @@ void test_draw_texture_crop(
 #include "font/font.h"
 #include "font/font.cpp"
 
-void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32 x, F32 y)
+// The texture will just be the texture
+// Then i pass in the colors to blend that texture with
+void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32 x, F32 y, Color color)
 {
   // TODO: Rename this baseline_y to something like "top-font-line", cause its not a baseline YET.
   F32 baseline_y = y + font_info->ascent;
@@ -498,12 +507,12 @@ void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32
     Font_codepoint_data_node* data = font_get_codepoint_node_opt(font_info, codepoint);
     if (data)
     {
-      x_offset += data->left_side_bearing;
+      // x_offset += data->left_side_bearing;
       Rect codepoint_rect = codepoint_rect_from_data(font_info, data);
       
       // TODO: Make sure i am not 1 px off due to range includeness
-      Rect dest_rect = rect_make(x_offset, baseline_y - data->glyph_bbox.y1, codepoint_rect.width, codepoint_rect.height);
-      test_draw_texture_pro(font_texture, codepoint_rect, dest_rect, C_TRANSPARENT);
+      Rect dest_rect = rect_make(x_offset + data->left_side_bearing, baseline_y - data->glyph_bbox.y1, codepoint_rect.width, codepoint_rect.height);
+      test_draw_texture_pro(font_texture, codepoint_rect, dest_rect, color);
       
       x_offset += data->advance_width;
       if (index < text.count - 1)
@@ -524,7 +533,7 @@ void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32
 
 }
 
-void test_draw_text_lines(Font_info* font_info, Texture2D font_texture, Str8 text, F32 x, F32 y)
+void test_draw_text_lines(Font_info* font_info, Str8 text, F32 x, F32 y)
 {
   F32 font_max_height = font_info->ascent - font_info->descent;
   
@@ -550,7 +559,7 @@ void test_draw_text_lines(Font_info* font_info, Texture2D font_texture, Str8 tex
   Rect complete_text_rect = rect_make(x, y, 0, font_max_height);
   complete_text_rect.width = font_dims.x;
   Assert((U32)font_max_height == (U32)font_dims.y, "Just making sure i understand the ttf here correctly.");
-  draw_rect(complete_text_rect, vec4_f32(1.0f, 0, 0, 0.3));
+  draw_rect(complete_text_rect, vec4_f32(1.0f, 0.0f, 0.0f, 0.3f));
 }
 
 void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
@@ -586,8 +595,8 @@ void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
   glUniformMatrix4fv(glGetUniformLocation(rect_program_id, "projection"), 1, GL_TRUE, (F32*)&mat4_ortho.x);
   glUniformMatrix4fv(glGetUniformLocation(rect_program_id, "translate"), 1, GL_TRUE, (F32*)&mat4_translate.x);
 
-  glUniform1f(glGetUniformLocation(rect_program_id, "t_width"), texture.width);
-  glUniform1f(glGetUniformLocation(rect_program_id, "t_height"), texture.height);
+  glUniform1f(glGetUniformLocation(rect_program_id, "t_width"), (GLfloat)texture.width);
+  glUniform1f(glGetUniformLocation(rect_program_id, "t_height"), (GLfloat)texture.height);
 
   glUniform1f(glGetUniformLocation(rect_program_id, "t_source_offset_x"), texture_source_rect.x);
   glUniform1f(glGetUniformLocation(rect_program_id, "t_source_offset_y"), texture_source_rect.y);
@@ -595,11 +604,11 @@ void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
   glUniform1f(glGetUniformLocation(rect_program_id, "t_source_rect_width"), texture_source_rect.width);
   glUniform1f(glGetUniformLocation(rect_program_id, "t_source_rect_height"), texture_source_rect.height);
 
-
   if (is_texture)
   {
     glUniform1i(glGetUniformLocation(rect_program_id, "is_texture1"), GL_TRUE); 
     glUniform1i(glGetUniformLocation(rect_program_id, "texture1"), 0);
+    glUniform4f(glGetUniformLocation(rect_program_id, "rect_color"), rect_color.r, rect_color.g, rect_color.b, rect_color.a); 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture.gl_id);
   }
@@ -715,6 +724,9 @@ void gl_load_rect_program()
       StringNewL,
       StringLine("uniform bool is_texture1;"),
       StringLine("uniform sampler2D texture1;"),
+      // StringNewL,
+      // StringLine("uniform bool is_text;"),
+      // StringLine("uniform fload text_alpa;"),
       StringNewL,
       StringLine("uniform vec4 rect_color;"),
       StringNewL,
@@ -724,7 +736,8 @@ void gl_load_rect_program()
       StringLine("{"),
       StringLine("  if (is_texture1)"),
       StringLine("  {"),
-      StringLine("    FragColor = texture(texture1, TextureCoord);"),  
+      StringLine("    FragColor = texture(texture1, TextureCoord);"), 
+      StringLine("    FragColor = vec4(rect_color.rgb, FragColor.a);"), 
       StringLine("  }"),
       StringLine("  else"),
       StringLine("  {"),

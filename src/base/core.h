@@ -74,6 +74,8 @@ typedef S64 B64;
 
 #define MemberOffset(Type, member) ( (U64)(&(((Type*)0)->member)) - (U64)((Type*)0) )
 
+#define UnusedVar(var_name) (void)var_name
+
 /* NOTES:
   Stack here is a list that only has the "first" node pointer. Nodes only have the "next" pointer.
   When pushed onto the stack list, the first element is the new node, and the old first is now next for the new node.

@@ -386,6 +386,16 @@ Rect rect_from_points_vec(Vec2_F32 p1, Vec2_F32 p2)
   return rect;
 }
 
+Rect rect_from_bbox(Bounding_box b_box)
+{
+  Rect rect = {};
+  rect.x = b_box.x0;
+  rect.y = b_box.y0;
+  rect.width = b_box.x1 - b_box.x0;
+  rect.height = b_box.y1 - b_box.y0;
+  return rect;
+}
+
 Vec2_F32 rect_pos(Rect rect)
 {
   Vec2_F32 result = {};
