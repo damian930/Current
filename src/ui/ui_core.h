@@ -1,9 +1,8 @@
 #ifndef D_UI_H
 #define D_UI_H
 
-#include "base/arena.h"
+#include "base/include.h"
 #include "font/font.h"
-#include "ui_stacks.h"
 
 enum Axis2 {
   Axis2_x,
@@ -35,43 +34,42 @@ struct UI_size {
 // Damian: Stacks
 //
 #define UI_STACK_DATA_TABLE \
-  UI_STACK_DATA( UI_background_color_stack, background_color_stack, UI_background_node,     node, Color,   value, ui_push_background_color, ui_pop_background_color, ui_current_backgound_color ) \
-  UI_STACK_DATA( UI_child_gap_stack,        child_gap_stack,        UI_child_gap_node,      node, F32,     value, ui_push_child_gap,        ui_pop_child_gap,        ui_current_child_gap       ) \
-  UI_STACK_DATA( UI_text_color_stack,       text_color_stack,       UI_text_color_node,     node, Color,   value, ui_push_text_color,       ui_pop_text_color,       ui_current_text_color      ) \
-  UI_STACK_DATA( UI_padding_stack,          padding_stack,          UI_padding_node,        node, F32,     value, ui_push_padding,          ui_pop_padding,          ui_current_padding         ) \
-  UI_STACK_DATA( UI_size_x_stack,           size_x_stack,           UI_size_x_node,         node, UI_size, value, ui_push_size_x,           ui_pop_size_x,           ui_current_size_x          ) \
-  UI_STACK_DATA( UI_size_y_stack,           size_y_stack,           UI_size_y_node,         node, UI_size, value, ui_push_size_y,           ui_pop_size_y,           ui_current_size_y          ) \
-  UI_STACK_DATA( UI_alignment_axis_stack,   alignment_axis_stack,   UI_alignment_axis_node, node, Axis2,   value, ui_push_alignment_axis,   ui_pop_alignment_axis,   ui_current_alignment_axis  )                                                   
+  UI_STACK_DATA( UI_background_color_stack, background_color_stack, UI_background_node,     node, Color,   value, C_GREY,               ui_push_background_color, ui_pop_background_color, ui_current_backgound_color ) \
+  UI_STACK_DATA( UI_child_gap_stack,        child_gap_stack,        UI_child_gap_node,      node, F32,     value, 10,                   ui_push_child_gap,        ui_pop_child_gap,        ui_current_child_gap       ) \
+  UI_STACK_DATA( UI_text_color_stack,       text_color_stack,       UI_text_color_node,     node, Color,   value, C_WHITE,              ui_push_text_color,       ui_pop_text_color,       ui_current_text_color      ) \
+  UI_STACK_DATA( UI_padding_stack,          padding_stack,          UI_padding_node,        node, F32,     value, 20,                   ui_push_padding,          ui_pop_padding,          ui_current_padding         ) \
+  UI_STACK_DATA( UI_size_x_stack,           size_x_stack,           UI_size_x_node,         node, UI_size, value, ui_size_px_make(500), ui_push_size_x,           ui_pop_size_x,           ui_current_size_x          ) \
+  UI_STACK_DATA( UI_size_y_stack,           size_y_stack,           UI_size_y_node,         node, UI_size, value, ui_size_px_make(500), ui_push_size_y,           ui_pop_size_y,           ui_current_size_y          ) \
+  UI_STACK_DATA( UI_layout_axis_stack,      layout_axis_stack,      UI_layout_axis_node,    node, Axis2,   value, Axis2_y,              ui_push_layout_axis,      ui_pop_layout_exis,      ui_current_layout_axis     )                                                   
 
 // Declaring stacks 
-#define UI_STACK_DATA(stack_struct_name,     \
-                      stack_var_name,        \
-                      node_struct_name,      \
-                      node_var_name,         \
-                      Value_type,            \
-                      value_var_name,        \
-                      push_func_name,        \
-                      pop_func_name,         \
-                      get_current_func_name) \
-  struct node_struct_name {                  \
-    node_struct_name* next;                  \
-    Value_type value_var_name;               \
-  };                                         \
-  struct stack_struct_name {                 \
-    node_struct_name* first;                 \
-    U32 count;                               \
+#define UI_STACK_DATA(stack_struct_name, stack_var_name,                   \
+                      node_struct_name,  node_var_name,                    \
+                      Value_type, value_var_name, default_value,           \
+                      push_func_name, pop_func_name, get_current_func_name \
+                    )                                                      \
+  struct node_struct_name {                                                \
+    node_struct_name* next;                                                \
+    Value_type value_var_name;                                             \
+  };                                                                       \
+  struct stack_struct_name {                                               \
+    node_struct_name* first;                                               \
+    U32 count;                                                             \
   }; 
   UI_STACK_DATA_TABLE;
 #undef UI_STACK_DATA
 //-///////////////////////////////////////////////////////////
 
-enum UI_box_flags : U32 {
+enum UI_box_flag : U32 {
   UI_box_flag__NONE            = (1 << 0),
   UI_box_flag__has_backgound   = (1 << 1),
   UI_box_flag__has_text        = (1 << 2),
-  UI_box_flag__draw_padding    = (1 << 3),
-  UI_box_flag__draw_child_gap  = (1 << 4),
+  UI_box_flag__clickable       = (1 << 3),
+  // TODO: I dont know what i want to do with these for now, since they kinda work differently from the other once
+  UI_box_flag__draw_padding    = (1 << 4),
+  UI_box_flag__draw_child_gap  = (1 << 5),
 };
+typedef U32 UI_box_flags;
 
 // TESTING STUFF IN HERE
 struct UI_Inputs {
@@ -91,7 +89,7 @@ struct UI_Box {
   // Nature of a box
   Str8 key;
   UI_size semantic_size[Axis2_COUNT];
-  Axis2 alignment_axis;
+  Axis2 layout_axis;
 
   // Extra features
   UI_box_flags flags;
@@ -134,15 +132,10 @@ struct UI_state {
   UI_Box* prev_frame_root;
 
   // Adding stacks
-  #define UI_STACK_DATA(stack_struct_name,     \
-                        stack_var_name,        \
-                        node_stuct_name,       \
-                        node_var_name,         \
-                        Value_type,            \
-                        value_var_name,        \
-                        push_func_name,        \
-                        pop_func_name,         \
-                        get_current_func_name) \
+  #define UI_STACK_DATA(stack_struct_name, stack_var_name,                    \
+                        node_stuct_name, node_var_name,                       \
+                        Value_type, value_var_name, default_value,            \
+                        push_func_name, pop_func_name, get_current_func_name) \
   stack_struct_name* stack_var_name;
   UI_STACK_DATA_TABLE
   #undef UI_STACK_DATA
@@ -156,7 +149,7 @@ UI_size ui_size_px_make(F32 value);
 UI_size ui_size_child_sum_make();
 UI_size ui_size_text_make();
 UI_size ui_size_percent_of_parent_make(F32 p);
-UI_size ui_size_fit_the_parent();
+UI_size ui_size_fit_the_parent_make();
 #define UI_SizePx(v)              ui_size_make(UI_size_kind_px, v)
 #define UI_SizeChildrenSum()      ui_size_make(UI_size_kind_children_sum, Null)
 #define UI_SizeText()             ui_size_make(UI_size_kind_text, Null)
@@ -179,15 +172,14 @@ Arena* ui_prev_build_arena();
 // B32 ui_is_clicked();
 
 // UI element creation stuff
-UI_Box* ui_allocate_box_helper(Arena* arena, 
-                               UI_size size_kind_x, UI_size size_kind_y, Axis2 alignment_axis, 
-                               const char* key, UI_box_flags flags, 
-                               Str8 text);
+// TODO: Either remove 1 of these or make a parameter specific (cstr/str8) name
+UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text);
+UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text);
+
 void ui_begin_build();
 void ui_end_build();
-UI_Box* ui_begin_box(UI_size size_kind_x, UI_size size_kind_y, Axis2 alignment_axis, 
-                     const char* key, UI_box_flags flags,
-                     Str8 text);
+
+UI_Box* ui_begin_box(Str8 key, UI_box_flags flags, Str8 text);
 void ui_end_box();
 
 // UI sizing/layout/pos stuff
@@ -205,20 +197,13 @@ void ui_draw_ui();
 void ui_draw_padding_for_current(Color padding_color);
 void ui_draw_child_gap_color(Color gap_color);
 
-void ui_make_box(Str8 key);
-void ui_make_box(const char* key);
-
+UI_Inputs ui_box_make(Str8 key, UI_box_flags flags, Str8 text);
 
 // Stacks
-#define UI_STACK_DATA(stack_struct_name,     \
-                      stack_var_name,        \
-                      node_struct_name,      \
-                      node_var_name,         \
-                      Value_type,            \
-                      value_var_name,        \
-                      push_func_name,        \
-                      pop_func_name,         \
-                      get_current_func_name) \
+#define UI_STACK_DATA(stack_struct_name, stack_var_name,                    \
+                      node_stuct_name, node_var_name,                       \
+                      Value_type, value_var_name, default_value,            \
+                      push_func_name, pop_func_name, get_current_func_name) \
 void push_func_name(Value_type value);       \
 void pop_func_name();                        \
 Value_type get_current_func_name();        

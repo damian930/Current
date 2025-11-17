@@ -52,16 +52,14 @@ void EntryPoint()
   Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
   // #define FONT_PATH "../data/papyrus.ttf"
   #define FONT_PATH "../data/Roboto-Regular.ttf"
-  Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 10, Str8FromClit(font_arena, FONT_PATH));
+  Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 32, Str8FromClit(font_arena, FONT_PATH));
 
   Arena* process_arena = arena_alloc(Megabytes_U64(10), "Process arena");
   Process_data_list* list = get_all_process_data(process_arena);
+  for (Process_data_node* node = list->first; node != 0; node = node->next)
   {
-    for (Process_data_node* node = list->first; node != 0; node = node->next)
-    {
-      Str8 path = str8_temp_from_str8(node->process_data.path); //str8_temp_from_str8(node->process_data.path);
-      printf("Path: %s \n", path.data);
-    }
+    Str8 path = str8_temp_from_str8(node->process_data.path); //str8_temp_from_str8(node->process_data.path);
+    printf("Path: %s \n", path.data);
   }
   
   Win32_window* window = 0;
@@ -80,47 +78,56 @@ void EntryPoint()
 
         while (!win32_window_shoud_close(window))
         {
+          arena_clear(str_arena);
+
           DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
           {
             #if 1
             DefereLoop(ui_begin_build(), ui_end_build())
             {
               ui_push_background_color(C_LIGHT_GREEN);
+              
+              ui_push_size_x(ui_size_child_sum_make());
+              ui_push_size_y(ui_size_child_sum_make());
+              ui_push_layout_axis(Axis2_y);
+              // ui_push_child_gap(0);
+              // ui_set_child_gap(0);
 
-              ui_begin_box(ui_size_child_sum_make(), ui_size_child_sum_make(), Axis2_y, "Key", UI_box_flag__has_backgound, Str8FromClit(str_arena, ""));
+              UI_BoxLoop(Str8FromClit(str_arena, "Key v stack"), UI_box_flag__has_backgound, str8_empty())
               {
-                for (Process_data_node* node = list->first; node != 0; node = node->next)
+                U32 node_index = 0;
+                for (Process_data_node* node = list->first; node != 0; node = node->next, node_index += 1)
                 {
-                  ui_begin_box(ui_size_child_sum_make(), ui_size_child_sum_make(), Axis2_x, "Row", UI_box_flag__has_backgound, Str8FromClit(str_arena, ""));
+                  ui_push_layout_axis(Axis2_x);
+                  UI_BoxLoop(Str8FromClit(str_arena, "Key row"), UI_box_flag__has_backgound, str8_empty())
                   {
-                    ui_begin_box(ui_size_text_make(), ui_size_text_make(), Axis2_x, "Key", UI_box_flag__has_text, node->process_data.path);
-                    {} 
-                    ui_end_box();
+                    // g_ui_state->current_parent->flags |= UI_box_flag__draw_padding;
+                    // g_ui_state->current_parent->flags |= UI_box_flag__draw_child_gap;
 
-                    // UI_BackgroundColor(C_BLUE)
-                    // {
-                    //   ui_begin_box(ui_size_fit_the_parent(), ui_size_px_make(1.0f), Axis2_x, "Spacer", UI_box_flag__has_backgound, Str8FromClit(str_arena, ""));
-                    //   {} 
-                    //   ui_end_box();
-                    // }
+                    ui_push_size_x(ui_size_text_make());
+                    ui_push_size_y(ui_size_text_make());
+  
+                    U8 buffer[512];
+                    sprintf((char*)buffer, "Row_key_%d", node_index);
+                    Str8 key = str8_from_cstr(str_arena, (char*)buffer);
+  
+                    UI_Inputs row_inputs = ui_box_make(key, UI_box_flag__has_text|UI_box_flag__clickable, node->process_data.path);
+                    ui_pop_size_x();
+                    ui_pop_size_y();
+                    if (row_inputs.is_hovered)
+                    {
+                      Str8 path = get_file_basename(node->process_data.path);
+                      printf("Path: %s \n", str8_temp_from_str8(path).data);
+                    }
                   }
-                  ui_end_box();
-
-                  // UI_BackgroundColor(C_GREY)
-                  // {
-                  //   ui_begin_box(ui_size_fit_the_parent(), ui_size_px_make(2.0f), Axis2_x, "Key", UI_box_flag__has_backgound, Str8FromClit(str_arena, ""));
-                  //   {} 
-                  //   ui_end_box();
-                  // }
                 }
               }
-              ui_end_box();
 
             } // ui_end_build()
-            #endif
-
+            
             ui_draw_ui();
-
+            #endif
+            
           } // r_gl_win32_end_frame()
         } // while (!win32_window_shoud_close(window))
 

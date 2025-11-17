@@ -1,6 +1,7 @@
 #ifndef BASE_STRING_H
 #define BASE_STRING_H
 
+#include <stdarg.h>
 #include "core.h"
 
 struct Arena;
@@ -27,7 +28,8 @@ struct Str8_node {
 struct Str8_list {
   Str8_node* first;
   Str8_node* last;
-  U64 count;
+  U64 node_count;
+  U64 char_count;
 };
 
 // Damian: Data_buffer stuff
@@ -37,9 +39,33 @@ Data_buffer data_buffer_make(Arena* arena, U64 size);
 U64 cstr_len(const char* name);
 
 // Damian: These null terminate until the next allocation on the same arena (See impl)
+Str8 str8_empty();
 Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len);
 Str8 str8_from_cstr(Arena* arena, const char* cstr);
 Str8 str8_from_str8(Arena* arena, Str8 str8);
+
+// Some like this: printf(str8_from_str8_f(arena, "%U32 %Str %csrt"), (U32)x, (Str8)str, "cstr")
+#if 0
+Str8 str8_from_str8_f(Arena* arena, const char* fmt, ...)
+{
+  va_list args = {};
+  DefereLoop(va_start(args, fmt), va_end(args))
+  {
+    U64 fmt_len = cstr_len(fmt);
+    for (U64 i = 0; i < fmt_len; i += 1)
+    {
+      NotImplemented();
+      // TODO: Create a syntax for the fmt, then lex it, parse it, create a string from it
+    }
+
+    // va_arg(args, Type_to_access)
+  }
+
+  // Iterate over the passed in string
+  // va_arg(args, Type);
+}
+#endif
+
 #define Str8FromClit(arena_p, clit) str8_from_cstr_len(arena_p, clit, ArrayCount(clit) - 1)
 
 // Damian: Fast pass str maker, string is valid until the next time scratch is used.
@@ -53,6 +79,7 @@ U8 char_to_upper(U8 ch);
 U8 normalise_slash(U8 ch);
 
 void str8_list_push_str(Arena* arena, Str8_list* list, Str8 str);
+Str8 str8_from_list(Arena* arena, Str8_list* list);
 
 B32 str8_match(Str8 str, Str8 other, U32 flags);
 B32 str8_match_cstr(Str8 str, const char* c_str, U32 flags);
@@ -63,9 +90,6 @@ Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, U32 flags);
 Str8 get_file_basename(Str8 path);
 Str8 get_file_name(Str8 path);
 Str8 get_file_extension(Str8 path);
-
-
-
 
 #endif
 

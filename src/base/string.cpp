@@ -31,6 +31,15 @@ U64 cstr_len(const char* name)
 ///////////////////////////////////////////////////////////
 // Damian: String stuff
 //
+// Damian: This is here insted of regular {}, since i usually use {} to represent the non yet given value. 
+//         If i want in code to specify that i specifically want the value to be, 
+//         and it to be zero, then i want it to be reflected in the code.
+Str8 str8_empty() 
+{
+  Str8 str = {};
+  return str;
+}
+
 Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len)
 {
   Str8 str = {};
@@ -103,7 +112,24 @@ void str8_list_push_str(Arena* arena, Str8_list* list, Str8 str)
   Str8_node* node = ArenaPush(arena, Str8_node);
   node->str = str;
   DllPushBack(list, node);
-  list->count += 1;
+  list->node_count += 1;
+  list->char_count += str.count;
+}
+
+Str8 str8_from_list(Arena* arena, Str8_list* list)
+{
+  Str8 str = data_buffer_make(arena, list->char_count);
+  U64 current_index = 0;
+  for (Str8_node* node = list->first; node != 0; node = node->next)
+  {
+    MemCopy(str.data + current_index, node->str.data, node->str.count);
+    current_index += node->str.count;
+  }
+  // Damian: I would rather not, but i dont have a way to not manually null terminate here
+  U8* nt = ArenaPush(arena, U8);
+  *nt = '\0';
+  arena_pop(arena, 1);
+  return str;
 }
 
 B32 str8_match(Str8 str, Str8 other, U32 flags)
@@ -221,7 +247,7 @@ Str8 get_file_basename(Str8 path)
                                               path, 
                                               Str8FromClit(scratch.arena, "/"), 
                                               Str8_match_flag_normalise_slash);
-    if (split_list.count > 0)
+    if (split_list.node_count > 0)
     {
       result = split_list.last->str;
     }
@@ -240,7 +266,7 @@ Str8 get_file_name(Str8 path)
                                               basename, 
                                               Str8FromClit(scratch.arena, "."), 
                                               Str8_match_flag_NONE);
-    if (split_list.count > 0) 
+    if (split_list.node_count > 0) 
     {
       result = split_list.first->str;
     }
@@ -259,7 +285,7 @@ Str8 result = {};
                                               basename, 
                                               Str8FromClit(scratch.arena, "."), 
                                               Str8_match_flag_NONE);
-    if (split_list.count > 0) 
+    if (split_list.node_count > 0) 
     {
       result = split_list.last->str;
     }

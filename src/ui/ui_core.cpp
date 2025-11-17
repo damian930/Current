@@ -1,14 +1,9 @@
 #ifndef D_UI_CPP
 #define D_UI_CPP
 
-#include "ui_core.h"
-
-#include "ui_stacks.h"
-#include "ui_stacks.cpp"
-
-#include "base/arena.cpp"
-
+#include "base/include.cpp"
 #include "os/core/os_core_win32.h"
+#include "ui_core.h"
 
 ///////////////////////////////////////////////////////////
 // Damian: Extra accesors
@@ -45,7 +40,7 @@ UI_size ui_size_percent_of_parent_make(F32 p)
   return result;
 }
 
-UI_size ui_size_fit_the_parent()
+UI_size ui_size_fit_the_parent_make()
 {
   UI_size result = ui_size_make(UI_size_kind_fit_the_parent, Null);
   return result;
@@ -53,13 +48,15 @@ UI_size ui_size_fit_the_parent()
 
 Arena* ui_current_build_arena()
 {
-  return g_ui_state->ui_tree_build_arenas[g_ui_state->current_arena_index];
+  Arena* arena = g_ui_state->ui_tree_build_arenas[g_ui_state->current_arena_index]; 
+  return arena;
 }
 
 Arena* ui_prev_build_arena()
 {
   U32 prev_arena_index = (g_ui_state->current_arena_index == 0 ? 1 : 0);
-  return g_ui_state->ui_tree_build_arenas[prev_arena_index];
+  Arena* arena = g_ui_state->ui_tree_build_arenas[prev_arena_index]; 
+  return arena;
 }
 
 ///////////////////////////////////////////////////////////
@@ -152,36 +149,40 @@ B32 ui_is_clicked()
 ///////////////////////////////////////////////////////////
 // Damian: UI element creation stuff 
 //
-UI_Box* ui_allocate_box_helper(
-  Arena* arena, 
-  UI_size size_kind_x, 
-  UI_size size_kind_y, 
-  Axis2 alignment_axis,
-  const char* key,
-  UI_box_flags flags,
-  Str8 text
-) {
-  UI_Box* box = ArenaPush(arena, UI_Box);
-
-  box->key = str8_from_cstr(arena, key);
-  box->semantic_size[Axis2_x] = size_kind_x;
-  box->semantic_size[Axis2_y] = size_kind_y;
-  box->alignment_axis = alignment_axis;
+UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text) 
+{
+  Arena* arena = ui_current_build_arena();
+  UI_Box* box = ArenaPush(ui_current_build_arena(), UI_Box);
+  
+  box->key = str8_from_str8(arena, key);
+  box->semantic_size[Axis2_x] = ui_current_size_x();
+  box->semantic_size[Axis2_y] = ui_current_size_y();
+  box->layout_axis = ui_current_layout_axis();
+  
+  box->padding   = ui_current_padding();
+  box->child_gap = ui_current_child_gap();
   
   box->flags = flags;
+  if (flags & UI_box_flag__has_backgound)
+  {
+    box->backgound_color = ui_current_backgound_color();
+  }
   if (flags & UI_box_flag__has_text)
   {
     box->text = str8_from_str8(arena, text); 
     box->text_color = ui_current_text_color(); 
   }
-  if (flags & UI_box_flag__has_backgound)
-  {
-    box->backgound_color = ui_current_backgound_color();
-  }
-  
-  box->padding   = ui_current_padding();
-  box->child_gap = ui_current_child_gap();
 
+  // TODO: I dont like the different nature for stuff like draw_padding whitch we supposed to not store as a bool bug get from flags
+
+  return box;
+}
+
+UI_Box* ui_allocated_and_set_up_box(const char* key, UI_box_flags flags, Str8 text)
+{
+  Scratch scratch = get_scratch();  
+  UI_Box* box = ui_allocated_and_set_up_box(str8_from_cstr(scratch.arena, key), flags, text);
+  end_scratch(&scratch);
   return box;
 }
 
@@ -195,28 +196,23 @@ void ui_begin_build()
   // TODO: I dont like this call here
   Rect ui_rect = win32_get_client_area_rect(g_ui_state->window);
 
-  g_ui_state->text_color_stack = ArenaPush(tree_arena, UI_text_color_stack);
-  ui_push_text_color(C_WHITE);
-  
-  g_ui_state->background_color_stack = ArenaPush(tree_arena, UI_background_color_stack);
-  ui_push_background_color(C_BLACK);
-  
-  g_ui_state->padding_stack = ArenaPush(tree_arena, UI_padding_stack);
-  ui_push_padding(10);
-
-  g_ui_state->child_gap_stack = ArenaPush(tree_arena, UI_child_gap_stack);
-  ui_push_child_gap(5);
+  #define UI_STACK_DATA(stack_struct_name, stack_var_name,                    \
+                        node_struct_name, node_var_name,                      \
+                        Value_type, value_var_name, default_value,            \
+                        push_func_name, pop_func_name, get_current_func_name) \
+  g_ui_state->stack_var_name = ArenaPush(tree_arena, stack_struct_name); \
+  push_func_name(default_value);                                         
+  UI_STACK_DATA_TABLE
+  #undef UI_STACK_DATA
 
   UI_box_flags root_flags = UI_box_flag__has_backgound;
-  UI_Box* new_root = ui_allocate_box_helper(tree_arena, 
-                                            UI_SizePx(ui_rect.width), 
-                                            UI_SizePx(ui_rect.height), 
-                                            Axis2_x, 
-                                            "ROOT_KEY_FOR_UI",
-                                            root_flags,
-                                            Str8FromClit(tree_arena, ""));
+  UI_Box* new_root = ui_allocated_and_set_up_box("ROOT_KEY_FOR_UI", root_flags, str8_empty());
   g_ui_state->root = new_root;
   g_ui_state->current_parent = new_root;
+
+  // TODO: This hardcoded here has to go
+  new_root->semantic_size[Axis2_x].value = ui_rect.width;
+  new_root->semantic_size[Axis2_y].value = ui_rect.height;
 }
 
 void ui_end_build()
@@ -226,21 +222,9 @@ void ui_end_build()
 
 #define UI_Key(value) #value
 
-UI_Box* ui_begin_box(
-  UI_size size_kind_x, 
-  UI_size size_kind_y, 
-  Axis2 alignment_axis, 
-  const char* key,
-  UI_box_flags flags,
-  Str8 text
-) {
-  UI_Box* new_box = ui_allocate_box_helper(ui_current_build_arena(), 
-                                           size_kind_x, 
-                                           size_kind_y, 
-                                           alignment_axis, 
-                                           key,
-                                           flags,
-                                           text);
+UI_Box* ui_begin_box(Str8 key, UI_box_flags flags, Str8 text) 
+{
+  UI_Box* new_box = ui_allocated_and_set_up_box(key, flags, text);
   DllPushBack(g_ui_state->current_parent, new_box);
   g_ui_state->current_parent->children_count += 1;
 
@@ -324,7 +308,7 @@ void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
       F32 total_size_on_axis = 0.0f;
       for (UI_Box* child = root->first; child != 0; child = child->next)
       {
-        if (root->alignment_axis == axis) {
+        if (root->layout_axis == axis) {
           total_size_on_axis += child->computed_sizes[axis];
         } else {
           total_size_on_axis = Max(total_size_on_axis, child->computed_sizes[axis]);
@@ -335,7 +319,7 @@ void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
       if (root->children_count > 0)
       {
         total_size_on_axis += 2 * root->padding; //ui_current_padding();
-        if (root->alignment_axis == axis)
+        if (root->layout_axis == axis)
         {
           total_size_on_axis += (root->children_count - 1) * root->child_gap; //ui_current_child_gap();
         }
@@ -406,7 +390,7 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
       // if (immediate_parent->children_count > 0) 
       // {
       //   size += 2 * ui_current_padding();
-      //   if (root->alignment_axis == axis)
+      //   if (root->layout_axis == axis)
       //   {
       //     total_size_on_axis += (root->children_count - 1) * ui_current_child_gap();
       //   }
@@ -462,7 +446,7 @@ void ui_layout_pass(UI_Box* root, Axis2 axis)
   U32 child_index = 0;
   for (UI_Box* child = root->first; child != 0; child = child->next)
   {
-    if (root->alignment_axis == axis)
+    if (root->layout_axis == axis)
     {
       child->computed_parent_rel_pos[axis] = root->padding /*ui_current_padding()*/ + total_children_width_before;
       child->computed_parent_rel_pos[axis] += child_index * root->child_gap; //ui_current_child_gap();
@@ -571,14 +555,14 @@ void ui_draw_ui_helper(UI_Box* root)
       if (child_index > 0)
       {
         Rect r = {};
-        if (root->alignment_axis == Axis2_x)
+        if (root->layout_axis == Axis2_x)
         {
           r.x      = root_pos.values[Axis2_x] + ui_current_padding() + children_total_size_on_align_axis_yet + ((child_index - 1) * ui_current_child_gap());
           r.y      = root_pos.values[Axis2_y] + ui_current_padding();
           r.width  = ui_current_child_gap();
           r.height = root_dims.values[Axis2_y] - (2 * ui_current_padding());
         }
-        else if (root->alignment_axis == Axis2_y)
+        else if (root->layout_axis == Axis2_y)
         {
           r.x      = root_pos.values[Axis2_x] + ui_current_padding();
           r.y      = root_pos.values[Axis2_y] + ui_current_padding() + children_total_size_on_align_axis_yet + ((child_index - 1) * ui_current_child_gap());
@@ -590,7 +574,7 @@ void ui_draw_ui_helper(UI_Box* root)
       }
 
       child_index += 1;
-      children_total_size_on_align_axis_yet += child_dims.values[root->alignment_axis];
+      children_total_size_on_align_axis_yet += child_dims.values[root->layout_axis];
     }
   }
   
@@ -774,39 +758,29 @@ void ui_draw_child_gap_color(Color gap_color)
 //   box->has_max_size[axis] = true;
 // }
 
-// void ui_make_box(Str8 key, UI_box_flags flags)
-// {
-//   // Just get all the current setting from the stacks, create the box, return the box to the caller
-//   UI_size def_size_x     = ui_current_size_x();
-//   UI_size def_size_y     = ui_current_size_y();
-//   Axis2 def_align_axis   = ui_current_axis();
-//   F32 padding            = ui_current_padding();
-//   F32 child_gap          = ui_current_child_gap();
-//   Color background_color = ui_current_backgound_color();
-//   Color text_color       = ui_current_text_color();
-  
-//   ui_begin_box(def_size_x, def_size_y, def_align_axis, key, flags, Str8{});
-//   ui_end_box();
-// }
+UI_Inputs ui_box_make(Str8 key, UI_box_flags flags, Str8 text)
+{
+  // TODO: See maybe ui_get_inputs not using the hidden element but expecting a parameter is better
+  UI_Inputs inputs = {};
+  UI_Box* box = ui_begin_box(key, flags, text);
+  {
+    inputs = ui_get_inputs();
+  }
+  ui_end_box();
+  return inputs;
+}
 
-// void ui_make_box(const char* key);
-// {
-
-// }
+#define UI_BoxLoop(key, flags, text) DefereLoop(ui_begin_box(key, flags, text), ui_end_box())
 
 ///////////////////////////////////////////////////////////
 // Damian: Stacks
 //
 // Defining stack push functions
-#define UI_STACK_DATA(stack_struct_name,     \
-                      stack_var_name,        \
-                      node_struct_name,      \
-                      node_var_name,         \
-                      Value_type,            \
-                      value_var_name,        \
-                      push_func_name,        \
-                      pop_func_name,         \
-                      get_current_func_name) \
+#define UI_STACK_DATA(stack_struct_name, stack_var_name,                   \
+                      node_struct_name, node_var_name,                     \
+                      Value_type, value_var_name, default_value,           \
+                      push_func_name, pop_func_name, get_current_func_name \
+                    )                                                      \
   void push_func_name(Value_type value)      \
   {                                          \
     node_struct_name* new_node = ArenaPush(ui_current_build_arena(), node_struct_name); \
@@ -818,15 +792,11 @@ void ui_draw_child_gap_color(Color gap_color)
 #undef UI_STACK_DATA
 
 // Defining stack pop functions
-#define UI_STACK_DATA(stack_struct_name,     \
-                      stack_var_name,        \
-                      node_struct_name,      \
-                      node_var_name,         \
-                      Value_type,            \
-                      value_var_name,        \
-                      push_func_name,        \
-                      pop_func_name,         \
-                      get_current_func_name) \
+#define UI_STACK_DATA(stack_struct_name, stack_var_name,                   \
+                      node_struct_name,  node_var_name,                    \
+                      Value_type, value_var_name, default_value,           \
+                      push_func_name, pop_func_name, get_current_func_name \
+                    )                                                      \
   void pop_func_name()                       \
   {                                          \
     StackPop(g_ui_state->stack_var_name);    \
@@ -836,15 +806,11 @@ void ui_draw_child_gap_color(Color gap_color)
 #undef UI_STACK_DATA
 
 // Defining stack get_current functions
-#define UI_STACK_DATA(stack_struct_name,     \
-                      stack_var_name,        \
-                      node_struct_name,      \
-                      node_var_name,         \
-                      Value_type,            \
-                      value_var_name,        \
-                      push_func_name,        \
-                      pop_func_name,         \
-                      get_current_func_name) \
+#define UI_STACK_DATA(stack_struct_name, stack_var_name,                   \
+                      node_struct_name,  node_var_name,                    \
+                      Value_type, value_var_name, default_value,           \
+                      push_func_name, pop_func_name, get_current_func_name \
+                    )                                                      \
   Value_type get_current_func_name()         \
   {                                          \
     Value_type value = g_ui_state->stack_var_name->first->value_var_name; \
@@ -852,6 +818,11 @@ void ui_draw_child_gap_color(Color gap_color)
   }
   UI_STACK_DATA_TABLE
 #undef UI_STACK_DATA
+
+
+
+
+
 
 
 

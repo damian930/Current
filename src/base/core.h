@@ -87,6 +87,7 @@ typedef S64 B64;
 
 #define StringLine(str) str " \n"
 #define StringNewL "\n"
+#define Stringify(x) #x 
 
 #define MemberOffset(Type, member) ( (U64)(&(((Type*)0)->member)) - (U64)((Type*)0) )
 
