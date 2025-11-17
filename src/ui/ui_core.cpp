@@ -172,6 +172,15 @@ UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text)
     box->text = str8_from_str8(arena, text); 
     box->text_color = ui_current_text_color(); 
   }
+  if (flags & UI_box_flag__draw_padding)
+  {
+    box->padding_color = ui_current_padding_color(); 
+  }
+  if (flags & UI_box_flag__draw_child_gap)
+  {
+    box->child_gap_color = ui_current_child_gap_color(); 
+  }
+
 
   // TODO: I dont like the different nature for stuff like draw_padding whitch we supposed to not store as a bool bug get from flags
 
@@ -197,7 +206,7 @@ void ui_begin_build()
   Rect ui_rect = win32_get_client_area_rect(g_ui_state->window);
 
   #define UI_STACK_DATA(stack_struct_name, stack_var_name,                    \
-                        node_struct_name, node_var_name,                      \
+                        node_struct_name,  node_var_name,                     \
                         Value_type, value_var_name, default_value,            \
                         push_func_name, pop_func_name, get_current_func_name) \
   g_ui_state->stack_var_name = ArenaPush(tree_arena, stack_struct_name); \
@@ -365,12 +374,13 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
         }
       }
 
+      // TODO: I dont know yet, weather i want to be getting the * value here for the usable parent or the root tho
       F32 size = usable_parent->computed_sizes[axis] * root->semantic_size[axis].value;
-      if (usable_parent->children_count > 0) 
+      size -= 2 * usable_parent->padding;
+      if (usable_parent->layout_axis == axis && usable_parent->children_count > 0)
       {
-        size -= 2 * root->padding; //ui_current_padding();
-        size -= (usable_parent->children_count - 1) * root->child_gap; //ui_current_child_gap();
-      }
+        size -= (usable_parent->children_count - 1) * root->child_gap; 
+      } 
       root->computed_sizes[axis] = size;
 
       for (UI_Box* child = root->first; child != 0; child = child->next)
@@ -530,7 +540,7 @@ void ui_draw_ui_helper(UI_Box* root)
 
   if (root->flags & UI_box_flag__draw_padding)
   {
-    F32 padding = ui_current_padding();
+    F32 padding = root->padding;
     Rect r1 = rect_make(root->computed_final_rect.x, root->computed_final_rect.y, padding, root->computed_final_rect.height);
     Rect r2 = rect_make(root->computed_final_rect.x, root->computed_final_rect.y, root->computed_final_rect.width, padding);
     Rect r3 = rect_make(root->computed_final_rect.x + root->computed_final_rect.width - padding, root->computed_final_rect.y, padding, root->computed_final_rect.height);
@@ -554,20 +564,22 @@ void ui_draw_ui_helper(UI_Box* root)
 
       if (child_index > 0)
       {
+        F32 padding = root->padding;
+        F32 child_gap = root->child_gap;
         Rect r = {};
         if (root->layout_axis == Axis2_x)
         {
-          r.x      = root_pos.values[Axis2_x] + ui_current_padding() + children_total_size_on_align_axis_yet + ((child_index - 1) * ui_current_child_gap());
-          r.y      = root_pos.values[Axis2_y] + ui_current_padding();
+          r.x      = root_pos.values[Axis2_x] + padding + children_total_size_on_align_axis_yet + ((child_index - 1) * child_gap);
+          r.y      = root_pos.values[Axis2_y] + padding;
           r.width  = ui_current_child_gap();
-          r.height = root_dims.values[Axis2_y] - (2 * ui_current_padding());
+          r.height = root_dims.values[Axis2_y] - (2 * padding);
         }
         else if (root->layout_axis == Axis2_y)
         {
-          r.x      = root_pos.values[Axis2_x] + ui_current_padding();
-          r.y      = root_pos.values[Axis2_y] + ui_current_padding() + children_total_size_on_align_axis_yet + ((child_index - 1) * ui_current_child_gap());
-          r.width  = root_dims.values[Axis2_x] - (2 * ui_current_padding());
-          r.height = ui_current_child_gap();
+          r.x      = root_pos.values[Axis2_x] + padding;
+          r.y      = root_pos.values[Axis2_y] + padding + children_total_size_on_align_axis_yet + ((child_index - 1) * child_gap);
+          r.width  = root_dims.values[Axis2_x] - (2 * padding);
+          r.height = child_gap;
         }
         else { InvalidCodePath(); }
         draw_rect(r, root->child_gap_color);
@@ -776,11 +788,10 @@ UI_Inputs ui_box_make(Str8 key, UI_box_flags flags, Str8 text)
 // Damian: Stacks
 //
 // Defining stack push functions
-#define UI_STACK_DATA(stack_struct_name, stack_var_name,                   \
-                      node_struct_name, node_var_name,                     \
-                      Value_type, value_var_name, default_value,           \
-                      push_func_name, pop_func_name, get_current_func_name \
-                    )                                                      \
+#define UI_STACK_DATA(stack_struct_name, stack_var_name,                    \
+                      node_struct_name,  node_var_name,                     \
+                      Value_type, value_var_name, default_value,            \
+                      push_func_name, pop_func_name, get_current_func_name) \
   void push_func_name(Value_type value)      \
   {                                          \
     node_struct_name* new_node = ArenaPush(ui_current_build_arena(), node_struct_name); \
@@ -792,11 +803,10 @@ UI_Inputs ui_box_make(Str8 key, UI_box_flags flags, Str8 text)
 #undef UI_STACK_DATA
 
 // Defining stack pop functions
-#define UI_STACK_DATA(stack_struct_name, stack_var_name,                   \
-                      node_struct_name,  node_var_name,                    \
-                      Value_type, value_var_name, default_value,           \
-                      push_func_name, pop_func_name, get_current_func_name \
-                    )                                                      \
+  #define UI_STACK_DATA(stack_struct_name, stack_var_name,                  \
+                      node_struct_name,  node_var_name,                     \
+                      Value_type, value_var_name, default_value,            \
+                      push_func_name, pop_func_name, get_current_func_name) \
   void pop_func_name()                       \
   {                                          \
     StackPop(g_ui_state->stack_var_name);    \
@@ -806,11 +816,10 @@ UI_Inputs ui_box_make(Str8 key, UI_box_flags flags, Str8 text)
 #undef UI_STACK_DATA
 
 // Defining stack get_current functions
-#define UI_STACK_DATA(stack_struct_name, stack_var_name,                   \
-                      node_struct_name,  node_var_name,                    \
-                      Value_type, value_var_name, default_value,           \
-                      push_func_name, pop_func_name, get_current_func_name \
-                    )                                                      \
+#define UI_STACK_DATA(stack_struct_name, stack_var_name,                    \
+                      node_struct_name,  node_var_name,                     \
+                      Value_type, value_var_name, default_value,            \
+                      push_func_name, pop_func_name, get_current_func_name) \
   Value_type get_current_func_name()         \
   {                                          \
     Value_type value = g_ui_state->stack_var_name->first->value_var_name; \
@@ -819,10 +828,20 @@ UI_Inputs ui_box_make(Str8 key, UI_box_flags flags, Str8 text)
   UI_STACK_DATA_TABLE
 #undef UI_STACK_DATA
 
+///////////////////////////////////////////////////////////
+// Damian: Some manuall settings for boxes
+//         Dont yet know what i want to use more, so implementing both, exploring
+//
+// void ui_set_text            (Str8 text)              { g_ui_state->current_parent->text            = text;             }
+// void ui_set_text_color      (Color text_color)       { g_ui_state->current_parent->text_color      = text_color;       }
+// void ui_set_flags           (UI_box_flags flags)     { g_ui_state->current_parent->flags           = flags;            }
+// void ui_set_background_color(Color background_color) { g_ui_state->current_parent->backgound_color = background_color; }
+// void ui_set_padding_color   (Color padding_color)    { g_ui_state->current_parent->padding_color   = padding_color;    }
+// void ui_set_child_gap_color (Color child_gap_color)  { g_ui_state->current_parent->child_gap_color = child_gap_color;  }
+// void ui_set_padding         (F32 padding)            { g_ui_state->current_parent->padding         = padding;          }
+// void ui_set_child_gap       (F32 child_gap)          { g_ui_state->current_parent->child_gap       = child_gap;        }
 
-
-
-
+// void ui_draw_padding() { g_ui_state->current_parent->flags |= UI_box_flag__draw_padding; }
 
 
 
