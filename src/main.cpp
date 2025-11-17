@@ -82,7 +82,7 @@ void EntryPoint()
         {
           DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
           {
-            #if 0
+            #if 1
             DefereLoop(ui_begin_build(), ui_end_build())
             {
               ui_push_background_color(C_LIGHT_GREEN);
@@ -119,7 +119,7 @@ void EntryPoint()
             } // ui_end_build()
             #endif
 
-            // ui_draw_ui();
+            ui_draw_ui();
 
           } // r_gl_win32_end_frame()
         } // while (!win32_window_shoud_close(window))

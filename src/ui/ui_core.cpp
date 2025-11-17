@@ -774,23 +774,86 @@ void ui_draw_child_gap_color(Color gap_color)
 //   box->has_max_size[axis] = true;
 // }
 
-#if 0
-void ui_make_box(Str8 key, UI_box_flags flags)
-{
-  Just get all the current setting from the stacks, create the box, return the box to the caller
-  UI_size def_size_x   = ui_current_size_x();
-  UI_size def_size_y   = ui_current_size_y();
-  Axis2 def_align_axis = ui_current_axis();
+// void ui_make_box(Str8 key, UI_box_flags flags)
+// {
+//   // Just get all the current setting from the stacks, create the box, return the box to the caller
+//   UI_size def_size_x     = ui_current_size_x();
+//   UI_size def_size_y     = ui_current_size_y();
+//   Axis2 def_align_axis   = ui_current_axis();
+//   F32 padding            = ui_current_padding();
+//   F32 child_gap          = ui_current_child_gap();
+//   Color background_color = ui_current_backgound_color();
+//   Color text_color       = ui_current_text_color();
   
-  ui_begin_box(def_size_x, def_size_y, def_align_axis, key, flags, Str8{});
-  ui_end_box();
-}
-#endif
+//   ui_begin_box(def_size_x, def_size_y, def_align_axis, key, flags, Str8{});
+//   ui_end_box();
+// }
 
 // void ui_make_box(const char* key);
 // {
 
 // }
+
+///////////////////////////////////////////////////////////
+// Damian: Stacks
+//
+// Defining stack push functions
+#define UI_STACK_DATA(stack_struct_name,     \
+                      stack_var_name,        \
+                      node_struct_name,      \
+                      node_var_name,         \
+                      Value_type,            \
+                      value_var_name,        \
+                      push_func_name,        \
+                      pop_func_name,         \
+                      get_current_func_name) \
+  void push_func_name(Value_type value)      \
+  {                                          \
+    node_struct_name* new_node = ArenaPush(ui_current_build_arena(), node_struct_name); \
+    new_node->value_var_name = value;                                                   \
+    StackPush(g_ui_state->stack_var_name, new_node);                                    \
+    g_ui_state->stack_var_name->count += 1;                                             \
+  }
+  UI_STACK_DATA_TABLE
+#undef UI_STACK_DATA
+
+// Defining stack pop functions
+#define UI_STACK_DATA(stack_struct_name,     \
+                      stack_var_name,        \
+                      node_struct_name,      \
+                      node_var_name,         \
+                      Value_type,            \
+                      value_var_name,        \
+                      push_func_name,        \
+                      pop_func_name,         \
+                      get_current_func_name) \
+  void pop_func_name()                       \
+  {                                          \
+    StackPop(g_ui_state->stack_var_name);    \
+    Assert(g_ui_state->stack_var_name->count >= 1); \
+  }
+  UI_STACK_DATA_TABLE
+#undef UI_STACK_DATA
+
+// Defining stack get_current functions
+#define UI_STACK_DATA(stack_struct_name,     \
+                      stack_var_name,        \
+                      node_struct_name,      \
+                      node_var_name,         \
+                      Value_type,            \
+                      value_var_name,        \
+                      push_func_name,        \
+                      pop_func_name,         \
+                      get_current_func_name) \
+  Value_type get_current_func_name()         \
+  {                                          \
+    Value_type value = g_ui_state->stack_var_name->first->value_var_name; \
+    return value;                                                         \
+  }
+  UI_STACK_DATA_TABLE
+#undef UI_STACK_DATA
+
+
 
 
 

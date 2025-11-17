@@ -15,7 +15,7 @@ Axis2 axis2_other(Axis2 axis)
 {
   Axis2 result = (axis == Axis2_x ? Axis2_y : Axis2_x);
   return result;
-}
+};
 
 enum UI_size_kind {
   UI_size_kind_px,
@@ -29,6 +29,41 @@ struct UI_size {
   UI_size_kind kind;
   F32 value;
 };
+
+// TODO: I wanted this to be in some other spot, but i just cant make it compile
+///////////////////////////////////////////////////////////
+// Damian: Stacks
+//
+#define UI_STACK_DATA_TABLE \
+  UI_STACK_DATA( UI_background_color_stack, background_color_stack, UI_background_node,     node, Color,   value, ui_push_background_color, ui_pop_background_color, ui_current_backgound_color ) \
+  UI_STACK_DATA( UI_child_gap_stack,        child_gap_stack,        UI_child_gap_node,      node, F32,     value, ui_push_child_gap,        ui_pop_child_gap,        ui_current_child_gap       ) \
+  UI_STACK_DATA( UI_text_color_stack,       text_color_stack,       UI_text_color_node,     node, Color,   value, ui_push_text_color,       ui_pop_text_color,       ui_current_text_color      ) \
+  UI_STACK_DATA( UI_padding_stack,          padding_stack,          UI_padding_node,        node, F32,     value, ui_push_padding,          ui_pop_padding,          ui_current_padding         ) \
+  UI_STACK_DATA( UI_size_x_stack,           size_x_stack,           UI_size_x_node,         node, UI_size, value, ui_push_size_x,           ui_pop_size_x,           ui_current_size_x          ) \
+  UI_STACK_DATA( UI_size_y_stack,           size_y_stack,           UI_size_y_node,         node, UI_size, value, ui_push_size_y,           ui_pop_size_y,           ui_current_size_y          ) \
+  UI_STACK_DATA( UI_alignment_axis_stack,   alignment_axis_stack,   UI_alignment_axis_node, node, Axis2,   value, ui_push_alignment_axis,   ui_pop_alignment_axis,   ui_current_alignment_axis  )                                                   
+
+// Declaring stacks 
+#define UI_STACK_DATA(stack_struct_name,     \
+                      stack_var_name,        \
+                      node_struct_name,      \
+                      node_var_name,         \
+                      Value_type,            \
+                      value_var_name,        \
+                      push_func_name,        \
+                      pop_func_name,         \
+                      get_current_func_name) \
+  struct node_struct_name {                  \
+    node_struct_name* next;                  \
+    Value_type value_var_name;               \
+  };                                         \
+  struct stack_struct_name {                 \
+    node_struct_name* first;                 \
+    U32 count;                               \
+  }; 
+  UI_STACK_DATA_TABLE;
+#undef UI_STACK_DATA
+//-///////////////////////////////////////////////////////////
 
 enum UI_box_flags : U32 {
   UI_box_flag__NONE            = (1 << 0),
@@ -173,6 +208,22 @@ void ui_draw_child_gap_color(Color gap_color);
 void ui_make_box(Str8 key);
 void ui_make_box(const char* key);
 
+
+// Stacks
+#define UI_STACK_DATA(stack_struct_name,     \
+                      stack_var_name,        \
+                      node_struct_name,      \
+                      node_var_name,         \
+                      Value_type,            \
+                      value_var_name,        \
+                      push_func_name,        \
+                      pop_func_name,         \
+                      get_current_func_name) \
+void push_func_name(Value_type value);       \
+void pop_func_name();                        \
+Value_type get_current_func_name();        
+  UI_STACK_DATA_TABLE
+#undef UI_STACK_DATA
 
 ///////////////////////////////////////////////////////////
 // Damian: TODO stuff
