@@ -1,10 +1,7 @@
 #ifndef WIN32_CORE_H
 #define WIN32_CORE_H
 
-#include "base/core.h"
-#include "base/string.h"
-#include "base/arena.h"
-
+#include "base/include.h"
 #include <windows.h>
 
 struct OS_Win32_mem_reserve_result {
@@ -49,8 +46,8 @@ struct OS_Win32_state
 global OS_Win32_state g_os_win32_state = {};
 
 // State
-void os_win32_init();
-void os_win32_release();
+void os_win32_state_init();
+void os_win32_state_release();
 
 // Memory
 // TODO: Alignment for allocations
@@ -85,11 +82,26 @@ extern U32 current_scratch_index;
 typedef Temp_arena Scratch;
 Scratch get_scratch();
 void end_scratch(Scratch* scratch);
+#define DefereScratchLoop(name) DefereInitReleaseLoop(Scratch name = get_scratch(), end_scratch(&name)) 
 
 // Manuall exit strategies
 void os_win32_exit(U32 exit_code);  
 void os_win32_display_fatal_error(const char* error_title, const char* error_text);
 
+// TODO: This has to be better with all these macros. 
+//       Also make sure that assert in debug is fine here, also add debug asserttodo here and release
+#define _AssertTodo_(expr, ...) \
+    do { \
+      char messege[1024]; \
+      sprintf(messege, "Forgot to remove the AssertTodo cuz, file: %s, line: %d", __FILE__, __LINE__); \
+      printf("%s \n", messege); \
+      os_win32_exit(1); \
+    } while(false) // TODO: Also adding some logging here would be nice if we allow this to be in the non debug build
+#define AssertTodo(expr, ...) _AssertTodo_(expr)
+#if DEBUG_MODE
+  #undef AssertTodo
+  #define AssertTodo(expr, ...) do { if (!(expr)) {Assert(expr); _AssertTodo_(expr); } } while (false)
+#endif
 
 
 

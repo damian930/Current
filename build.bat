@@ -47,6 +47,9 @@ if "%samples%"=="1" (
   (
     if "%text_loading%"=="1" echo [text_loading] & cl /nologo /I ../ /Zi text_loading.cpp 
     if "%os_mem%"=="1" echo [os_mem] & cl /nologo /I ../ /Zi os_mem.cpp 
+    if "%process_data%"=="1" echo [process_data] & cl /nologo /I ../ /Zi process_data.cpp 
+    if "%defere_init_macro%"=="1" echo [defere_init_macro] & cl /nologo /I ../ /Zi defere_init_macro.cpp 
+
     erase *.obj
     erase *.ilk
   )

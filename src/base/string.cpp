@@ -211,6 +211,7 @@ Str8_list str8_split_by_cstr(Arena* arena, Str8 str, const char* sep, U32 flags)
   return list;
 }
 
+// TODO: These have to be moved to somewhere else or just renamed to confirm to the naming scheme of str8 stuff
 Str8 get_file_basename(Str8 path)
 {
   Str8 result = {};

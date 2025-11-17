@@ -108,6 +108,11 @@ global UI_state* g_ui_state = 0;
 
 // Extra accesors
 UI_size ui_size_make(UI_size_kind kind, F32 value);
+UI_size ui_size_px_make(F32 value);
+UI_size ui_size_child_sum_make();
+UI_size ui_size_text_make();
+UI_size ui_size_percent_of_parent_make(F32 p);
+UI_size ui_size_fit_the_parent();
 #define UI_SizePx(v)              ui_size_make(UI_size_kind_px, v)
 #define UI_SizeChildrenSum()      ui_size_make(UI_size_kind_children_sum, Null)
 #define UI_SizeText()             ui_size_make(UI_size_kind_text, Null)
@@ -115,6 +120,7 @@ UI_size ui_size_make(UI_size_kind kind, F32 value);
 #define UI_SizeFitTheParent()     ui_size_make(UI_size_kind_fit_the_parent, Null)
 Arena* ui_current_build_arena();
 Arena* ui_prev_build_arena();
+
 
 // State
 void ui_state_init(Win32_window* window, Font_info* font_info);

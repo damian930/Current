@@ -1,4 +1,4 @@
-  #ifndef OS_GFX_WIN32_CPP
+#ifndef OS_GFX_WIN32_CPP
 #define OS_GFX_WIN32_CPP
 
 #include "os_gfx_win32.h"

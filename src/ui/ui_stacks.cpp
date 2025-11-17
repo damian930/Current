@@ -65,6 +65,8 @@ void ui_set_background_color(Color value)
   g_ui_state->current_parent->backgound_color = value;
 }
 
+#define UI_BackgroundColor(color) DefereLoop(ui_push_background_color(color), ui_pop_background_color())
+
 ///////////////////////////////////////////////////////////
 // Damian: Padding
 //
@@ -96,6 +98,7 @@ void ui_set_padding(F32 value)
 {
   g_ui_state->current_parent->padding = value;
 }
+
 
 ///////////////////////////////////////////////////////////
 // Damian: Child gap
@@ -129,6 +132,7 @@ void ui_set_child_gap(F32 value)
   g_ui_state->current_parent->child_gap = value;
 }
 
+#define UI_ChildGap(value) DefereLoop(ui_push_child_gap(value), ui_pop_child_gap())
 
 
 

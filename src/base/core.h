@@ -3,10 +3,12 @@
 
 #include <inttypes.h> // For int types
 #include <stdlib.h>   // ...
-#include <stdio.h>    // Printf
+#include <stdio.h>    // Printf, Sprintf
 #include <string.h>   // For memset and stuff
 
 // TODO: Add rjd/martins like preprocesor define for platforms, bitnes, debug/release ...
+
+
 
 typedef int8_t   S8;
 typedef int16_t  S16;
@@ -33,7 +35,20 @@ typedef S64 B64;
 
 #define Null NULL
 
+#define _Concat(a, b) a##b 
+#define Concat(a, b) _Concat(a, b)
+
 #define DefereLoop(start_exp, end_exp) for(U64 __dli = ((start_exp), 0); __dli < 1; __dli += 1, (end_exp))
+
+// Damian: Since i am using __LINE__ here for the it var name, 
+// 			   splitting the macro into different lines will produce different it var names
+//	       Here is kinda what it looks like in 2 lines
+//         #define DefereInitReleaseLoop(init_expr, release_expr) 
+//				 	for (U32 it_name = 0; it_name == 0;) 
+//				 		for (init_expr; it_name == 0; it_name = 1, release_expr)
+#define DefereInitReleaseLoop(init_expr, release_expr) \
+	for (U32 _DefereInitReleaseLoop_It = 0; _DefereInitReleaseLoop_It == 0;) for (init_expr; _DefereInitReleaseLoop_It == 0; _DefereInitReleaseLoop_It = 1, release_expr)
+
 #define ForEach(it_name, arr)          for (U64 it_name = 0; it_name < ArrayCount(arr); it_name += 1)
 #define ForEachEx(it_name, count, arr) for (U64 it_name = 0; it_name < count; it_name += 1)
 
@@ -44,6 +59,7 @@ typedef S64 B64;
 #if DEBUG_MODE 
 	#undef Assert
 	#define Assert(expr, ...) do { if (!(expr)) {*((int*)0) = 69;} } while(false)
+	// #define Assert(expr, ...) do { __ } while(false)
 #endif
 #define AssertNote(expr, ...) Assert(expr);
 

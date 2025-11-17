@@ -21,6 +21,36 @@ UI_size ui_size_make(UI_size_kind kind, F32 value)
   return result;
 }
 
+UI_size ui_size_px_make(F32 value)
+{
+  UI_size result = ui_size_make(UI_size_kind_px, value);
+  return result;
+}
+
+UI_size ui_size_child_sum_make()
+{
+  UI_size result = ui_size_make(UI_size_kind_children_sum, Null);
+  return result;
+}
+
+UI_size ui_size_text_make()
+{
+  UI_size result = ui_size_make(UI_size_kind_text, Null);
+  return result;
+}
+
+UI_size ui_size_percent_of_parent_make(F32 p)
+{
+  UI_size result = ui_size_make(UI_size_kind_percent_of_parent, p);
+  return result;
+}
+
+UI_size ui_size_fit_the_parent()
+{
+  UI_size result = ui_size_make(UI_size_kind_fit_the_parent, Null);
+  return result;
+}
+
 Arena* ui_current_build_arena()
 {
   return g_ui_state->ui_tree_build_arenas[g_ui_state->current_arena_index];
@@ -304,10 +334,10 @@ void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
       // Padding and stuff
       if (root->children_count > 0)
       {
-        total_size_on_axis += 2 * ui_current_padding();
+        total_size_on_axis += 2 * root->padding; //ui_current_padding();
         if (root->alignment_axis == axis)
         {
-          total_size_on_axis += (root->children_count - 1) * ui_current_child_gap();
+          total_size_on_axis += (root->children_count - 1) * root->child_gap; //ui_current_child_gap();
         }
       }
 
@@ -354,8 +384,8 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
       F32 size = usable_parent->computed_sizes[axis] * root->semantic_size[axis].value;
       if (usable_parent->children_count > 0) 
       {
-        size -= 2 * ui_current_padding();
-        size -= (usable_parent->children_count - 1) * ui_current_child_gap();
+        size -= 2 * root->padding; //ui_current_padding();
+        size -= (usable_parent->children_count - 1) * root->child_gap; //ui_current_child_gap();
       }
       root->computed_sizes[axis] = size;
 
@@ -406,8 +436,8 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
       }
       if (usable_parent->children_count > 0)
       {
-        size -= 2 * ui_current_padding();
-        size -= (usable_parent->children_count - 1) * ui_current_child_gap();
+        size -= 2 * root->padding; //ui_current_padding();
+        size -= (usable_parent->children_count - 1) * root->child_gap; //ui_current_child_gap();
       }
 
       root->computed_sizes[axis] = size;
@@ -434,15 +464,15 @@ void ui_layout_pass(UI_Box* root, Axis2 axis)
   {
     if (root->alignment_axis == axis)
     {
-      child->computed_parent_rel_pos[axis] = ui_current_padding() + total_children_width_before;
-      child->computed_parent_rel_pos[axis] += child_index * ui_current_child_gap();
+      child->computed_parent_rel_pos[axis] = root->padding /*ui_current_padding()*/ + total_children_width_before;
+      child->computed_parent_rel_pos[axis] += child_index * root->child_gap; //ui_current_child_gap();
       total_children_width_before += child->computed_sizes[axis];
       child_index += 1;
     }
     else
     {
       // There can only be a single child in the axis that is not set for child aligning
-      child->computed_parent_rel_pos[axis] = ui_current_padding();
+      child->computed_parent_rel_pos[axis] = root->padding; //ui_current_padding();
     }
 
     ui_layout_pass(child, axis);

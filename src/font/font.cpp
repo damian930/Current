@@ -125,7 +125,7 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints,
       // TODO: I here use asci only, but we need to split U32 codepoint unicode id into separat U8 parts if we are using them
       //       Leaving the compiler time warning for this no not forget.
       Font_codepoint_data_node* new_node = ArenaPush(arena, Font_codepoint_data_node);
-      new_node->codepoint         = it_codepoint;
+      new_node->codepoint         = (U8)it_codepoint;
       new_node->advance_width     = advance_width;
       new_node->left_side_bearing = left_side_bearing;
       // TODO: Make sure that this funstion return x1 and y1 non inclusive style.
@@ -155,8 +155,8 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints,
             && range_u32_within(range_of_codepoints, entry->glyph2)
         ) {
           Font_kern_node* new_node = ArenaPush(arena, Font_kern_node);
-          new_node->kern_pair.codepoint1 = entry->glyph1;
-          new_node->kern_pair.codepoint2 = entry->glyph2;
+          new_node->kern_pair.codepoint1 = (U8)entry->glyph1;
+          new_node->kern_pair.codepoint2 = (U8)entry->glyph2;
           new_node->kern_pair.advance = scale * (F32)entry->advance;
   
           DllPushBack(kern_list, new_node);

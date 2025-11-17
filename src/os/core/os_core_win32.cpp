@@ -2,7 +2,9 @@
 #define WIN32_CORE_CPP
 
 #include "os_core_win32.h"
-#include "base/math.cpp"
+#include "base/include.cpp"
+
+#pragma comment(lib, "User32.lib")
 
 // TODO: Make sure inside the funtion that use os that os has been inited
 //       This is particulary important here, since we are not using dyn pointers for state data
@@ -11,7 +13,7 @@
 ///////////////////////////////////////////////////////////
 // Damian: State
 //
-void os_win32_init()
+void os_win32_state_init()
 {
   // Performace freq
   {
@@ -28,13 +30,13 @@ void os_win32_init()
     g_os_win32_state.allocation_granularity = (U32)info.dwAllocationGranularity;
   }
 
-  scratch_arenas[0] = arena_alloc(Gigabytes_U64(1), "scratch arena 1");
-  scratch_arenas[1] = arena_alloc(Gigabytes_U64(1), "scratch arena 2");
+  scratch_arenas[0] = arena_alloc(Gigabytes_U64(1), "Scratch arena 1");
+  scratch_arenas[1] = arena_alloc(Gigabytes_U64(1), "Scratch arena 2");
 
   g_os_win32_state.is_initialised = true;
 }
 
-void os_win32_release()
+void os_win32_state_release()
 {
   arena_release(scratch_arenas[0]);
   arena_release(scratch_arenas[1]); 
@@ -272,15 +274,13 @@ OS_Win32_file_data os_win32_file_data(OS_Win32_file file)
 ///////////////////////////////////////////////////////////
 // Damian: Thread context
 //
+// TODO: Mark these with g_ 
 Arena* scratch_arenas[NumberOfScratchArenas];
 U32 current_scratch_index = 0;
 
 StaticAssert(ArrayCount(scratch_arenas) == 2, "get_scratch doesnt work if the number of scratch arenas doesnt equal 2.");
 Scratch get_scratch()
 {
-  // IMPORTANT: I could also conditionally compile assert when debug mode
-  //       and a fatal error window when release mode 
-
   Assert(g_os_win32_state.is_initialised);
 
   Assert(current_scratch_index == 0 || current_scratch_index == 1);

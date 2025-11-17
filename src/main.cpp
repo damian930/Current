@@ -35,7 +35,7 @@ int main()
   //         i dont want to have all these scopes in the main function code.
   //         So i decided to initialise them up front and then just use then inside a custom
   //         EntryPoint (not my idea, Ryan J. Fleury style).
-  DefereLoop(os_win32_init(), os_win32_release())
+  DefereLoop(os_win32_state_init(), os_win32_state_release())
   DefereLoop(win32_gfx_init(), win32_gfx_release())
   DefereLoop(r_gl_win32_state_init(), r_gl_win32_state_release())
   {
@@ -45,10 +45,75 @@ int main()
   return 0;
 }
 
+#include "process_tracker/process_tracker.h"
+#include "process_tracker/process_tracker.cpp"
 void EntryPoint()
 {
   Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
   // #define FONT_PATH "../data/papyrus.ttf"
+  #define FONT_PATH "../data/Roboto-Regular.ttf"
+  Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 52, Str8FromClit(font_arena, FONT_PATH));
+
+  // Arena* process_arena = arena_alloc(Megabytes_U64(10), "Process arena");
+  Scratch scratch = get_scratch();
+  {
+    // Process_data_list* list = get_all_process_data(process_arena);
+    Process_data_list* list = get_all_process_data(scratch.arena);
+    for (Process_data_node* node = list->first; node != 0; node = node->next)
+    {
+      Str8 path = str8_temp_from_str8(node->process_data.path); //str8_temp_from_str8(node->process_data.path);
+      printf("Path: %s \n", path.data);
+    }
+  }
+  end_scratch(&scratch);
+  
+  // DefereInitReleaseLoop(Scratch scratch = get_scratch(), end_scratch(&scratch))
+  // {
+  //   Process_data_list* list = get_all_process_data(scratch.arena);
+  //   for (Process_data_node* node = list->first; node != 0; node = node->next)
+  //   {
+  //     Str8 path = str8_from_str8(scratch.arena, node->process_data.path); //str8_temp_from_str8(node->process_data.path);
+  //     printf("Path: %s \n", path.data);
+  //   }
+  // }
+
+  Win32_window* window = 0;
+  DefereLoop(window = win32_create_window(), win32_close_window(window)) 
+  {
+    // TODO: Thing about not having ui init take paramets and just set them like for renderer to keep the layer init clean
+    DefereLoop(ui_state_init(window, font_info), ui_state_release()) 
+    {
+      Texture2D font_texture = create_a_texture_from_font_atlas(font_info);
+      ui_equip_font_texture(font_texture);
+      DefereLoop(r_gl_win32_equip_window(window), r_gl_win32_remove_window()) 
+      {
+        r_gl_win32_set_frame_rate(144);
+        
+        while (!win32_window_shoud_close(window))
+        {
+          DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
+          {
+            DefereLoop(ui_begin_build(), ui_end_build())
+            {
+             
+            } // ui_end_build()
+
+            ui_draw_ui();
+
+          } // r_gl_win32_end_frame()
+        } // while (!win32_window_shoud_close(window))
+
+      }
+    }
+  }
+} 
+
+#if 0
+void EntryPoint()
+{
+  Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
+  // #define FONT_PATH "../data/papyrus.ttf"
+
   #define FONT_PATH "../data/Roboto-Regular.ttf"
   Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 52, Str8FromClit(font_arena, FONT_PATH));
 
@@ -75,23 +140,73 @@ void EntryPoint()
           {
             DefereLoop(ui_begin_build(), ui_end_build())
             {
+              // TODO: Test 
               ui_push_background_color(C_LIGHT_GREEN);
-              ui_begin_box(UI_SizePx(500), UI_SizePx(500), Axis2_y, "Main key", UI_box_flag__has_backgound, "");
+
+              ui_begin_box(UI_SizePercentOfParent(1), UI_SizeChildrenSum(), Axis2_x, "Name row", UI_box_flag__has_backgound, "");
               {
-                local B32 is_menu_open = false;
-                if (ui_get_inputs().is_clicked)
+                UI_BackgroundColor(C_BLUE)
                 {
-                  ToggleBool(is_menu_open);
-                }
-                
-                if (is_menu_open)
-                {
-                  ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, UI_Key(__LINE__), UI_box_flag__has_text, "Text");
-                  {}
+                  ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Box 1", UI_box_flag__has_backgound, "");
+                  {
+                    ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "Icon text", UI_box_flag__has_text, "Icon");
+                    {}
+                    ui_end_box();
+                  
+                    ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "Title text", UI_box_flag__has_text, "Title");
+                    {}
+                    ui_end_box();
+                  }
                   ui_end_box();
                 }
+                
+                // Spacer here to stretch to the sides of the screen
+                ui_begin_box(UI_SizeFitTheParent(), UI_SizePx(0), Axis2_x, "Spacer 1 key", UI_box_flag__NONE, "");
+                {}
+                ui_end_box();
+
+                UI_BackgroundColor(C_RED)
+                {
+                  UI_ChildGap(50)
+                  {
+                    ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Box 1", UI_box_flag__has_backgound, "");
+                    {
+                      ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "CPU text", UI_box_flag__has_text, "CPU");
+                      {}
+                      ui_end_box();
+                      
+                      ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "GPU text", UI_box_flag__has_text, "GPU");
+                      {}
+                      ui_end_box();
+                      
+                      ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "RAM text", UI_box_flag__has_text, "RAM");
+                      {}
+                      ui_end_box();
+                    }
+                    ui_end_box();
+                  }
+                  ui_pop_child_gap();
+                }
+
               }
               ui_end_box();
+
+              // ui_begin_box(UI_SizePx(500), UI_SizePx(500), Axis2_y, "Main key", UI_box_flag__has_backgound, "");
+              // {
+              //   local B32 is_menu_open = false;
+              //   if (ui_get_inputs().is_clicked)
+              //   {
+              //     ToggleBool(is_menu_open);
+              //   }
+                
+              //   if (is_menu_open)
+              //   {
+              //     ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, UI_Key(__LINE__), UI_box_flag__has_text, "Text");
+              //     {}
+              //     ui_end_box();
+              //   }
+              // }
+              // ui_end_box();
             }
             ui_draw_ui();
           }
@@ -102,6 +217,8 @@ void EntryPoint()
     }
   }
 } 
+
+#endif
 
 #define SCREEN_SHOT_DEMO 0
 #if SCREEN_SHOT_DEMO

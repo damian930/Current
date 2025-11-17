@@ -24,6 +24,7 @@ Arena* arena_alloc(U64 n_bytes_to_allocate, const char* name);
 void arena_clear(Arena* arena);
 void arena_release(Arena* arena);
 
+// TODO: Use asan poison/unpoison markup for arena allocations
 U8* _arena_push_no_zero(Arena* arena, U64 n_bytes_to_push);
 U8* _arena_push(Arena* arena, U64 n_bytes_to_push);
 #define ArenaPushNoZero(arena_p, Type)           (Type*) _arena_push_no_zero(arena_p, sizeof(Type))

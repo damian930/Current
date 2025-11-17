@@ -24,7 +24,7 @@ struct List {
 
 int main()
 {
-  DefereLoop(os_win32_init(), os_win32_release())
+  DefereLoop(os_win32_state_init(), os_win32_state_release())
   {
     EntryPoint();
   }
