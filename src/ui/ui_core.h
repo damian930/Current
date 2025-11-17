@@ -42,7 +42,7 @@ struct UI_size {
   UI_STACK_DATA( UI_padding_color_stack,    padding_color_stack,    UI_padding_color_node,   node, Color,   value, C_TRANSPARENT,         ui_push_padding_color,    ui_pop_padding_color,    ui_current_padding_color   ) \
   UI_STACK_DATA( UI_size_x_stack,           size_x_stack,           UI_size_x_node,          node, UI_size, value, ui_size_px_make(0.0f), ui_push_size_x,           ui_pop_size_x,           ui_current_size_x          ) \
   UI_STACK_DATA( UI_size_y_stack,           size_y_stack,           UI_size_y_node,          node, UI_size, value, ui_size_px_make(0.0f), ui_push_size_y,           ui_pop_size_y,           ui_current_size_y          ) \
-  UI_STACK_DATA( UI_layout_axis_stack,      layout_axis_stack,      UI_layout_axis_node,     node, Axis2,   value, Axis2_y,               ui_push_layout_axis,      ui_pop_layout_exis,      ui_current_layout_axis     )                                                   
+  UI_STACK_DATA( UI_layout_axis_stack,      layout_axis_stack,      UI_layout_axis_node,     node, Axis2,   value, Axis2_y,               ui_push_layout_axis,      ui_pop_layout_axis,      ui_current_layout_axis     )                                                   
 
 // Declaring stacks 
 #define UI_STACK_DATA(stack_struct_name, stack_var_name,                    \

@@ -388,24 +388,6 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
         ui_sizing_for_parent_dependant_elements(child, axis);
       }
 
-      // This is commented, cause i dont feel like we need to calculate this here, since we are not child dependant
-      // -----
-      // // IMPORTANT:
-      // // Calculating size based on padding and stuff
-      // // Altho we might use non imediate parent for size, 
-      // // we do use the most imediate parent for padding and number of child gaps,
-      // // since that parent is where the current element will be resting
-      // UI_Box* immediate_parent = root->parent;
-      // F32 size = usable_parent->computed_sizes[axis] * root->semantic_size[axis].value;
-      // if (immediate_parent->children_count > 0) 
-      // {
-      //   size += 2 * ui_current_padding();
-      //   if (root->layout_axis == axis)
-      //   {
-      //     total_size_on_axis += (root->children_count - 1) * ui_current_child_gap();
-      //   }
-      // }
-
     } break;
 
     case UI_size_kind_fit_the_parent:
@@ -423,15 +405,34 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
         }
       }
 
+      // Get the size to which we can extend
       F32 size = usable_parent->computed_sizes[axis];
+      F32 total_chilren_size = 0.0f;
       for (UI_Box* child = usable_parent->first; child != 0; child = child->next)
       {
-        size -= child->computed_sizes[axis];
+        if (usable_parent->layout_axis == axis) {
+          total_chilren_size += child->computed_sizes[axis];
+        } else {
+          total_chilren_size = usable_parent->computed_sizes[axis] - usable_parent->padding * 2;
+          break;
+        }
       }
-      if (usable_parent->children_count > 0)
+      size -= total_chilren_size;
+
+      // TODO:
+      //      Accound for 2 paddings, the parent and the usable parent if the first parent was the child sum element
+      //      Also if we have multiple child sums in a row, then we have to account for that amound of possible paddings
+      F32 total_padding_across_levels = root->parent->padding;
+      for (UI_Box* test_parent = root->parent; test_parent != usable_parent->parent && test_parent != 0; test_parent = test_parent->parent)
       {
-        size -= 2 * root->padding; //ui_current_padding();
-        size -= (usable_parent->children_count - 1) * root->child_gap; //ui_current_child_gap();
+        if (root->parent == test_parent) continue;
+        total_padding_across_levels += test_parent->padding;
+      }
+
+      size -= total_padding_across_levels;
+      if (usable_parent->layout_axis == axis)
+      {
+        size -= (root->parent->children_count - 1) * root->parent->child_gap; 
       }
 
       root->computed_sizes[axis] = size;

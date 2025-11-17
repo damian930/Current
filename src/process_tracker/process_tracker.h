@@ -85,6 +85,45 @@ struct Time { // UTC
   U32 millie_second;
 };
 
+const char* month_as_cstr(Month month)
+{
+  const char* cstr = "";
+  switch (month) 
+  {
+    default: { InvalidCodePath(); } break;
+    case Month_January:   { cstr = "January";   } break;
+    case Month_February:  { cstr = "February";  } break;
+    case Month_March:     { cstr = "March";     } break;
+    case Month_April:     { cstr = "April";     } break;
+    case Month_May:       { cstr = "May";       } break;
+    case Month_June:      { cstr = "June";      } break;
+    case Month_July:      { cstr = "July";      } break;
+    case Month_August:    { cstr = "August";    } break;
+    case Month_September: { cstr = "September"; } break;
+    case Month_October:   { cstr = "October";   } break;
+    case Month_November:  { cstr = "November";  } break;
+    case Month_December:  { cstr = "December";  } break;
+  }  
+  return cstr;
+}
+
+const char* day_as_cstr(Day day)
+{
+  const char* cstr = "";
+  switch (day) 
+  {
+    default: { InvalidCodePath(); } break;
+    case Day_Monday:    { cstr = "Monday";    } break;
+    case Day_Tuesday:   { cstr = "Tuesday";   } break;
+    case Day_Wednesday: { cstr = "Wednesday"; } break;
+    case Day_Thursday:  { cstr = "Thursday";  } break;
+    case Day_Friday:    { cstr = "Friday";    } break;
+    case Day_Saturday:  { cstr = "Saturday";  } break;
+    case Day_Sunday:    { cstr = "Sunday";    } break;
+  }  
+  return cstr;
+}
+
 Time time_from_win32_system_time(SYSTEMTIME* sys_time)
 {
   Time time = {};
@@ -96,6 +135,14 @@ Time time_from_win32_system_time(SYSTEMTIME* sys_time)
   time.second        = sys_time->wSecond;
   time.millie_second = sys_time->wMilliseconds;
   return time;
+}
+
+Str8 time_as_str8(Arena* arena, Time time)
+{
+  U8 buffer[512];
+  sprintf((char*)buffer, "%d:%d", time.hour, time.minute);
+  Str8 str = str8_from_cstr(arena, (char*)buffer);
+  return str;
 }
 
 ///////////////////////////////////////////////////////////

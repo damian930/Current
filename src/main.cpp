@@ -86,37 +86,49 @@ void EntryPoint()
             {
               DefereLoop(ui_push_size_x(ui_size_percent_of_parent_make(1)), ui_pop_size_x())
               DefereLoop(ui_push_size_y(ui_size_percent_of_parent_make(1)), ui_pop_size_y())
-              DefereLoop(ui_push_layout_axis(Axis2_y), ui_pop_layout_exis())
               DefereLoop(ui_push_background_color(C_GREY), ui_pop_background_color())
               DefereLoop(ui_push_padding(20), ui_pop_padding())
               DefereLoop(ui_push_child_gap(1), ui_pop_child_gap())
               DefereLoop(ui_push_padding_color(C_LIGHT_GREEN), ui_pop_padding_color())
               DefereLoop(ui_push_child_gap_color(C_MAGENTA), ui_pop_child_gap_color())
+              DefereLoop(ui_push_layout_axis(Axis2_y), ui_pop_layout_axis())
               UI_BoxLoop(Str8FromClit(str_arena, "Key v stack"), UI_box_flag__has_backgound|UI_box_flag__draw_padding|UI_box_flag__draw_child_gap, str8_empty())
               {
-                // DefereLoop(ui_push_background_color(C_BLUE), ui_pop_background_color())
-                // UI_BoxLoop(Str8FromClit(str_arena, "Test"), UI_box_flag__has_backgound, str8_empty())
-                // {
-                  U32 node_index = 0;
-                  for (Process_data_node* node = list->first; node != 0; node = node->next, node_index += 1)
+                U32 node_index = 0;
+                for (Process_data_node* node = list->first; node != 0; node = node->next, node_index += 1)
+                {
+                  DefereLoop(ui_push_size_x(ui_size_child_sum_make()), ui_pop_size_x())
+                  DefereLoop(ui_push_size_y(ui_size_child_sum_make()), ui_pop_size_y())
+                  DefereLoop(ui_push_layout_axis(Axis2_x), ui_pop_layout_axis())
+                  DefereLoop(ui_push_background_color(C_RED), ui_pop_background_color())
+                  UI_BoxLoop(Str8FromClit(str_arena, "Row"), UI_box_flag__has_backgound, str8_empty())
                   {
+                    // Label
                     DefereLoop(ui_push_background_color(C_BLUE), ui_pop_background_color())
                     DefereLoop(ui_push_size_x(ui_size_text_make()), ui_pop_size_x())
                     DefereLoop(ui_push_size_y(ui_size_text_make()), ui_pop_size_y())
                     {
-                      U8 buffer[512];
-                      sprintf((char*)buffer, "Row_key_%d", node_index);
-                      Str8 key = str8_from_cstr(str_arena, (char*)buffer);
-                      UI_Inputs row_inputs = ui_box_make(key, UI_box_flag__has_text|UI_box_flag__has_backgound|UI_box_flag__clickable, node->process_data.path);
-                      if (row_inputs.is_hovered)
-                      {
-                        Str8 path = get_file_basename(node->process_data.path);
-                        printf("Path: %s \n", str8_temp_from_str8(path).data);
-                      }
+                      ui_box_make(Str8FromClit(str_arena, "row key"), UI_box_flag__has_text|UI_box_flag__has_backgound, get_file_basename(node->process_data.path));
                     }
+                    
+                    DefereLoop(ui_push_size_x(ui_size_fit_the_parent_make()), ui_pop_size_x())
+                    DefereLoop(ui_push_size_y(ui_size_px_make(5.0f)), ui_pop_size_y())
+                    DefereLoop(ui_push_background_color(C_YELLOW), ui_pop_background_color())
+                    {
+                      ui_box_make(Str8FromClit(str_arena, "row key"), UI_box_flag__has_backgound, str8_empty());
+                    }
+
+                    // Label
+                    DefereLoop(ui_push_background_color(C_BLUE), ui_pop_background_color())
+                    DefereLoop(ui_push_size_x(ui_size_text_make()), ui_pop_size_x())
+                    DefereLoop(ui_push_size_y(ui_size_text_make()), ui_pop_size_y())
+                    {
+                      ui_box_make(Str8FromClit(str_arena, "row key"), UI_box_flag__has_text|UI_box_flag__has_backgound, time_as_str8(str_arena, node->process_data.creation_time));
+                    }
+
                   }
+                }
                       
-                // }
               }
             }
             ui_draw_ui();
