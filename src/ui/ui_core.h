@@ -98,10 +98,19 @@ struct UI_state {
   // Prev frame tree
   UI_Box* prev_frame_root;
 
-  UI_text_color_stack* text_color_stack;
-  UI_background_color_stack* background_color_stack;
-  UI_padding_stack* padding_stack;
-  UI_child_gap_stack* child_gap_stack;
+  // Adding stacks
+  #define UI_STACK_DATA(stack_struct_name,     \
+                        stack_var_name,        \
+                        node_stuct_name,       \
+                        node_var_name,         \
+                        Value_type,            \
+                        value_var_name,        \
+                        push_func_name,        \
+                        pop_func_name,         \
+                        get_current_func_name) \
+  stack_struct_name* stack_var_name;
+  UI_STACK_DATA_TABLE
+  #undef UI_STACK_DATA
 };
 
 global UI_state* g_ui_state = 0;
@@ -126,25 +135,24 @@ Arena* ui_prev_build_arena();
 void ui_state_init(Win32_window* window, Font_info* font_info);
 void ui_state_release();
 
-// DEBUG Input stuff
-
+// Getters
+Arena* ui_current_build_arena();  
+Arena* ui_prev_build_arena();
 
 // UI_Box* ui_get_box_with_key_opt(UI_Box* root, Str8 key);
 // B32 test_inputs_for_box(UI_Box* box);
 // B32 ui_is_clicked();
 
-
-
 // UI element creation stuff
 UI_Box* ui_allocate_box_helper(Arena* arena, 
                                UI_size size_kind_x, UI_size size_kind_y, Axis2 alignment_axis, 
                                const char* key, UI_box_flags flags, 
-                               const char* text);
+                               Str8 text);
 void ui_begin_build();
 void ui_end_build();
 UI_Box* ui_begin_box(UI_size size_kind_x, UI_size size_kind_y, Axis2 alignment_axis, 
                      const char* key, UI_box_flags flags,
-                     const char* c_str);
+                     Str8 text);
 void ui_end_box();
 
 // UI sizing/layout/pos stuff
@@ -161,6 +169,10 @@ void ui_draw_ui();
 // THESE ARE JUST SOME EXTRA THINGS I AM TESTING AND DONT WANT TO PUT IN OTHER FUNCS FOR NOW
 void ui_draw_padding_for_current(Color padding_color);
 void ui_draw_child_gap_color(Color gap_color);
+
+void ui_make_box(Str8 key);
+void ui_make_box(const char* key);
+
 
 ///////////////////////////////////////////////////////////
 // Damian: TODO stuff

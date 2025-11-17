@@ -178,7 +178,7 @@ void r_gl_win32_state_init()
 
   g_win32_gl_renderer->frame_rate = R_WIN32_GL_DEFAULT_FRAME_RATE;
 
-  g_win32_gl_renderer->frame_arena = arena_alloc(Kilobytes_U64(100), "Renderer GL frame arena");
+  g_win32_gl_renderer->frame_arena = arena_alloc(Gigabytes_U64(1), "Renderer GL frame arena");
 }
 
 void r_gl_win32_state_release()

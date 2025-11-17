@@ -52,31 +52,18 @@ void EntryPoint()
   Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
   // #define FONT_PATH "../data/papyrus.ttf"
   #define FONT_PATH "../data/Roboto-Regular.ttf"
-  Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 52, Str8FromClit(font_arena, FONT_PATH));
+  Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 10, Str8FromClit(font_arena, FONT_PATH));
 
-  // Arena* process_arena = arena_alloc(Megabytes_U64(10), "Process arena");
-  Scratch scratch = get_scratch();
+  Arena* process_arena = arena_alloc(Megabytes_U64(10), "Process arena");
+  Process_data_list* list = get_all_process_data(process_arena);
   {
-    // Process_data_list* list = get_all_process_data(process_arena);
-    Process_data_list* list = get_all_process_data(scratch.arena);
     for (Process_data_node* node = list->first; node != 0; node = node->next)
     {
       Str8 path = str8_temp_from_str8(node->process_data.path); //str8_temp_from_str8(node->process_data.path);
       printf("Path: %s \n", path.data);
     }
   }
-  end_scratch(&scratch);
   
-  // DefereInitReleaseLoop(Scratch scratch = get_scratch(), end_scratch(&scratch))
-  // {
-  //   Process_data_list* list = get_all_process_data(scratch.arena);
-  //   for (Process_data_node* node = list->first; node != 0; node = node->next)
-  //   {
-  //     Str8 path = str8_from_str8(scratch.arena, node->process_data.path); //str8_temp_from_str8(node->process_data.path);
-  //     printf("Path: %s \n", path.data);
-  //   }
-  // }
-
   Win32_window* window = 0;
   DefereLoop(window = win32_create_window(), win32_close_window(window)) 
   {
@@ -89,16 +76,50 @@ void EntryPoint()
       {
         r_gl_win32_set_frame_rate(144);
         
+        Arena* str_arena = arena_alloc(Kilobytes_U64(64), "String arena");
+
         while (!win32_window_shoud_close(window))
         {
           DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
           {
+            #if 0
             DefereLoop(ui_begin_build(), ui_end_build())
             {
-             
-            } // ui_end_build()
+              ui_push_background_color(C_LIGHT_GREEN);
 
-            ui_draw_ui();
+              ui_begin_box(ui_size_child_sum_make(), ui_size_child_sum_make(), Axis2_y, "Key", UI_box_flag__has_backgound, Str8FromClit(str_arena, ""));
+              {
+                for (Process_data_node* node = list->first; node != 0; node = node->next)
+                {
+                  ui_begin_box(ui_size_child_sum_make(), ui_size_child_sum_make(), Axis2_x, "Row", UI_box_flag__has_backgound, Str8FromClit(str_arena, ""));
+                  {
+                    ui_begin_box(ui_size_text_make(), ui_size_text_make(), Axis2_x, "Key", UI_box_flag__has_text, node->process_data.path);
+                    {} 
+                    ui_end_box();
+
+                    // UI_BackgroundColor(C_BLUE)
+                    // {
+                    //   ui_begin_box(ui_size_fit_the_parent(), ui_size_px_make(1.0f), Axis2_x, "Spacer", UI_box_flag__has_backgound, Str8FromClit(str_arena, ""));
+                    //   {} 
+                    //   ui_end_box();
+                    // }
+                  }
+                  ui_end_box();
+
+                  // UI_BackgroundColor(C_GREY)
+                  // {
+                  //   ui_begin_box(ui_size_fit_the_parent(), ui_size_px_make(2.0f), Axis2_x, "Key", UI_box_flag__has_backgound, Str8FromClit(str_arena, ""));
+                  //   {} 
+                  //   ui_end_box();
+                  // }
+                }
+              }
+              ui_end_box();
+
+            } // ui_end_build()
+            #endif
+
+            // ui_draw_ui();
 
           } // r_gl_win32_end_frame()
         } // while (!win32_window_shoud_close(window))

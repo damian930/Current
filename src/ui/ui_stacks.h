@@ -3,77 +3,49 @@
 
 #include "ui_core.h"
 
-// TODO: Add headers for push pop get for stacks
+// Table for the ui stacks 
+#define UI_STACK_DATA_TABLE \
+  UI_STACK_DATA(UI_background_color_stack, background_color_stack, UI_background_node, node, Color, value, ui_push_background_color, ui_pop_background_color, ui_current_backgound_color) \
+  UI_STACK_DATA(UI_child_gap_stack,        child_gap_stack,        UI_child_gap_node,  node, F32,   value, ui_push_child_gap,        ui_pop_child_gap,        ui_current_child_gap      ) \
+  UI_STACK_DATA(UI_text_color_stack,       text_color_stack,       UI_text_color_node, node, Color, value, ui_push_text_color,       ui_pop_text_color,       ui_current_text_color     ) \
+  UI_STACK_DATA(UI_padding_stack,          padding_stack,          UI_padding_node,    node, F32,   value, ui_push_padding,          ui_pop_padding,          ui_current_padding        ) 
 
-// Testing to see how macros would work for this
-// #define UI_DeclareNode(Node_type_name, Value_type) struct Node_type_name { Node_type_name* next; Value_type value; };  //UI_DeclareNode_Helper(UI_ConstructNodeName(node_name), Value_type) 
-// #define UI_DeclareStack(Stack_type_name, Node_type_name) struct Stack_type_name { Node_type_name* first; U32 count; };  //UI_DeclareStack_Helper(UI_ConstructStackName(stack_name), UI_node_type) 
+// Declaring stacks here
+#define UI_STACK_DATA(stack_struct_name,     \
+                      stack_var_name,        \
+                      node_struct_name,      \
+                      node_var_name,         \
+                      Value_type,            \
+                      value_var_name,        \
+                      push_func_name,        \
+                      pop_func_name,         \
+                      get_current_func_name) \
+  struct node_struct_name {                  \
+    node_struct_name* next;                  \
+    Value_type value_var_name;               \
+  };                                         \
+  struct stack_struct_name {                 \
+    node_struct_name* first;                 \
+    U32 count;                               \
+  }; 
+  UI_STACK_DATA_TABLE;
+#undef UI_STACK_DATA
 
-// #define UI_DefineStack_Push(func_name, stack_name, Node_type_name, Value_type) \
-//   void func_name(Value_type new_value) \
-//   { \
-//     Node_type_name* node = ArenaPush(ui_current_build_arena(), Node_type_name); \
-//     node->value = new_value; \
-//     StackPush(g_ui_state->stack_name, node); \
-//     g_ui_state->stack_name->count += 1; \
-//   }; 
-
-// UI_DeclareNode(UI_background_color_node, Color);
-// UI_DeclareStack(UI_background_color_stack, UI_background_color_node);
-
-// UI_DefineStack_Push(ui_push_backgound_color, background_color_stack, UI_background_color_node, Color);
-
-///////////////////////////////////////////////////////////
-// Damian: Text color
-//
-struct UI_text_color_node {
-  UI_text_color_node* next;
-  Color value;
-};
-
-struct UI_text_color_stack {
-  UI_text_color_node* first;
-  U32 count;
-};
-
-///////////////////////////////////////////////////////////
-// Damian: Backgound color
-//
-struct UI_background_color_node {
-  UI_background_color_node* next;
-  Color value;
-}; 
-
-struct UI_background_color_stack {
-  UI_background_color_node* first;
-  U32 count;
-};
-
-///////////////////////////////////////////////////////////
-// Damian: Padding
-//
-struct UI_padding_node {
-  UI_padding_node* next;
-  F32 value;
-};
-
-struct UI_padding_stack {
-  UI_padding_node* first;
-  U32 count;
-};
-
-///////////////////////////////////////////////////////////
-// Damian: Child gap
-//
-struct UI_child_gap_node {
-  UI_child_gap_node* next;
-  F32 value;
-};
-
-struct UI_child_gap_stack {
-  UI_child_gap_node* first;
-  U32 count;
-};
+// Declaring stack push/pop/get_current functions
+#define UI_STACK_DATA(stack_struct_name,     \
+                      stack_var_name,        \
+                      node_struct_name,      \
+                      node_var_name,         \
+                      Value_type,            \
+                      value_var_name,        \
+                      push_func_name,        \
+                      pop_func_name,         \
+                      get_current_func_name) \
+  void push_func_name();                     \
+  void pop_func_name();                      \
+  Value_type get_current_func_name();        
+  UI_STACK_DATA_TABLE
+#undef UI_STACK_DATA
 
 
 

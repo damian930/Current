@@ -3,138 +3,61 @@
 
 #include "ui_stacks.h"
 
-///////////////////////////////////////////////////////////
-// Damian: Text color
-//
-void ui_push_text_color(Color value)
-{
-  UI_text_color_node* node = ArenaPush(ui_current_build_arena(), UI_text_color_node);
-  node->value = value;
-  StackPush(g_ui_state->text_color_stack, node);
-  g_ui_state->text_color_stack->count += 1;
-}  
-
-void ui_pop_text_color()
-{
-  if (g_ui_state->text_color_stack->count > 1)
-  {
-    StackPop(g_ui_state->text_color_stack);
-    g_ui_state->text_color_stack->count -= 1;
+// Defining stack push functions
+#define UI_STACK_DATA(stack_struct_name,     \
+                      stack_var_name,        \
+                      node_struct_name,      \
+                      node_var_name,         \
+                      Value_type,            \
+                      value_var_name,        \
+                      push_func_name,        \
+                      pop_func_name,         \
+                      get_current_func_name) \
+  void push_func_name(Value_type value)      \
+  {                                          \
+    node_struct_name* new_node = ArenaPush(ui_current_build_arena(), node_struct_name); \
+    new_node->value_var_name = value;                                                   \
+    StackPush(g_ui_state->stack_var_name, new_node);                                    \
+    g_ui_state->stack_var_name->count += 1;                                             \
   }
-}
+  UI_STACK_DATA_TABLE
+#undef UI_STACK_DATA
 
-Color ui_current_text_color()
-{
-  Color value = g_ui_state->text_color_stack->first->value;
-  return value;
-}
-
-void ui_set_text_color(Color value)
-{
-  g_ui_state->current_parent->text_color = value;
-}
-
-///////////////////////////////////////////////////////////
-// Damian: Background color
-//
-void ui_push_background_color(Color value)
-{
-  UI_background_color_node* node = ArenaPush(ui_current_build_arena(), UI_background_color_node);
-  node->value = value;
-  StackPush(g_ui_state->background_color_stack, node);
-  g_ui_state->background_color_stack->count += 1;
-}
-
-void ui_pop_background_color()
-{
-  if (g_ui_state->background_color_stack->count > 1)
-  {
-    StackPop(g_ui_state->background_color_stack);
-    g_ui_state->background_color_stack->count -= 1;
+// Defining stack pop functions
+#define UI_STACK_DATA(stack_struct_name,     \
+                      stack_var_name,        \
+                      node_struct_name,      \
+                      node_var_name,         \
+                      Value_type,            \
+                      value_var_name,        \
+                      push_func_name,        \
+                      pop_func_name,         \
+                      get_current_func_name) \
+  void pop_func_name()                       \
+  {                                          \
+    StackPop(g_ui_state->stack_var_name);    \
+    Assert(g_ui_state->stack_var_name->count >= 1); \
   }
-}
+  UI_STACK_DATA_TABLE
+#undef UI_STACK_DATA
 
-Color ui_current_backgound_color()
-{
-  Color value = g_ui_state->background_color_stack->first->value;
-  return value;
-}
-
-void ui_set_background_color(Color value)
-{
-  g_ui_state->current_parent->backgound_color = value;
-}
-
-#define UI_BackgroundColor(color) DefereLoop(ui_push_background_color(color), ui_pop_background_color())
-
-///////////////////////////////////////////////////////////
-// Damian: Padding
-//
-void ui_push_padding(F32 value)
-{
-  UI_padding_node* node = ArenaPush(ui_current_build_arena(), UI_padding_node);
-  node->value = value;
-  StackPush(g_ui_state->padding_stack, node);
-  g_ui_state->padding_stack->count += 1;
-}
-
-void ui_pop_padding()
-{
-  if (g_ui_state->padding_stack->count > 1)
-  {
-    StackPop(g_ui_state->padding_stack);
-    g_ui_state->padding_stack->count -= 1;
+// Defining stack get_current functions
+#define UI_STACK_DATA(stack_struct_name,     \
+                      stack_var_name,        \
+                      node_struct_name,      \
+                      node_var_name,         \
+                      Value_type,            \
+                      value_var_name,        \
+                      push_func_name,        \
+                      pop_func_name,         \
+                      get_current_func_name) \
+  Value_type get_current_func_name()         \
+  {                                          \
+    Value_type value = g_ui_state->stack_var_name->first->value; \
+    return value;                                                \
   }
-}
-
-F32 ui_current_padding()
-{
-  UI_padding_stack* stack = g_ui_state->padding_stack;
-  Assert(stack->count >= 1);
-  return stack->first->value;
-}
-
-void ui_set_padding(F32 value)
-{
-  g_ui_state->current_parent->padding = value;
-}
-
-
-///////////////////////////////////////////////////////////
-// Damian: Child gap
-//
-void ui_push_child_gap(F32 value)
-{
-  UI_child_gap_node* node = ArenaPush(ui_current_build_arena(), UI_child_gap_node);
-  node->value = value;
-  StackPush(g_ui_state->child_gap_stack, node);
-  g_ui_state->child_gap_stack->count += 1;
-}
-
-void ui_pop_child_gap()
-{
-  if (g_ui_state->child_gap_stack->count > 1)
-  {
-    StackPop(g_ui_state->child_gap_stack);
-    g_ui_state->child_gap_stack->count -= 1;
-  }
-}
-
-F32 ui_current_child_gap()
-{
-  UI_child_gap_stack* stack = g_ui_state->child_gap_stack;
-  Assert(stack->count >= 1);
-  return stack->first->value;
-} 
-
-void ui_set_child_gap(F32 value)
-{
-  g_ui_state->current_parent->child_gap = value;
-}
-
-#define UI_ChildGap(value) DefereLoop(ui_push_child_gap(value), ui_pop_child_gap())
-
-
+  UI_STACK_DATA_TABLE
+#undef UI_STACK_DATA
 
 
 

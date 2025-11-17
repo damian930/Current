@@ -74,8 +74,8 @@ void ui_state_init(Win32_window* window, Font_info* font_info)
   g_ui_state->font_info = font_info;
 
   g_ui_state->current_arena_index = 0;
-  g_ui_state->ui_tree_build_arenas[0] = arena_alloc(Kilobytes_U64(64), "UI tree build arena 1");
-  g_ui_state->ui_tree_build_arenas[1] = arena_alloc(Kilobytes_U64(64), "UI tree build arena 2");
+  g_ui_state->ui_tree_build_arenas[0] = arena_alloc(Megabytes_U64(64), "UI tree build arena 1");
+  g_ui_state->ui_tree_build_arenas[1] = arena_alloc(Megabytes_U64(64), "UI tree build arena 2");
 }
 
 void ui_state_release()
@@ -159,7 +159,7 @@ UI_Box* ui_allocate_box_helper(
   Axis2 alignment_axis,
   const char* key,
   UI_box_flags flags,
-  const char* text
+  Str8 text
 ) {
   UI_Box* box = ArenaPush(arena, UI_Box);
 
@@ -171,7 +171,7 @@ UI_Box* ui_allocate_box_helper(
   box->flags = flags;
   if (flags & UI_box_flag__has_text)
   {
-    box->text = str8_from_cstr(arena, text);
+    box->text = str8_from_str8(arena, text); 
     box->text_color = ui_current_text_color(); 
   }
   if (flags & UI_box_flag__has_backgound)
@@ -214,7 +214,7 @@ void ui_begin_build()
                                             Axis2_x, 
                                             "ROOT_KEY_FOR_UI",
                                             root_flags,
-                                            "");
+                                            Str8FromClit(tree_arena, ""));
   g_ui_state->root = new_root;
   g_ui_state->current_parent = new_root;
 }
@@ -232,7 +232,7 @@ UI_Box* ui_begin_box(
   Axis2 alignment_axis, 
   const char* key,
   UI_box_flags flags,
-  const char* c_str
+  Str8 text
 ) {
   UI_Box* new_box = ui_allocate_box_helper(ui_current_build_arena(), 
                                            size_kind_x, 
@@ -240,7 +240,7 @@ UI_Box* ui_begin_box(
                                            alignment_axis, 
                                            key,
                                            flags,
-                                           c_str);
+                                           text);
   DllPushBack(g_ui_state->current_parent, new_box);
   g_ui_state->current_parent->children_count += 1;
 
@@ -774,7 +774,23 @@ void ui_draw_child_gap_color(Color gap_color)
 //   box->has_max_size[axis] = true;
 // }
 
+#if 0
+void ui_make_box(Str8 key, UI_box_flags flags)
+{
+  Just get all the current setting from the stacks, create the box, return the box to the caller
+  UI_size def_size_x   = ui_current_size_x();
+  UI_size def_size_y   = ui_current_size_y();
+  Axis2 def_align_axis = ui_current_axis();
+  
+  ui_begin_box(def_size_x, def_size_y, def_align_axis, key, flags, Str8{});
+  ui_end_box();
+}
+#endif
 
+// void ui_make_box(const char* key);
+// {
+
+// }
 
 
 

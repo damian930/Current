@@ -66,16 +66,15 @@ Process_data_list* get_all_process_data(Arena* arena)
 
       // Getting the process file path
       {
+        // TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:
+        // TODO: Think about this here, scratch on scratch issue :TODO:
+        // TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:
         {
           Scratch scratch = get_scratch(); 
           Data_buffer name_buffer = data_buffer_make(scratch.arena, 512);
           U32 bytes_written_no_nt = (U32)name_buffer.count;  
           BOOL succ = QueryFullProcessImageNameA(handle, 0, (CHAR*)name_buffer.data, (DWORD*)&bytes_written_no_nt); 
           end_scratch(&scratch);
-          
-          // TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:
-          // TODO: Think about this here, scratch on scratch issue :TODO:
-          // TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:
           if (succ) 
           {
             Str8 name = str8_substring(name_buffer, 0, bytes_written_no_nt);
