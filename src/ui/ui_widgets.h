@@ -2,62 +2,41 @@
 #define D_UI_WIDGETS_H
 
 #include "ui_core.h"
-#include "ui_core.cpp"
 
-#if 0
-
-void ui_label(const char* str, const char* key)
+UI_Inputs ui_label(Str8 key, Str8 str)
 {
-  ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, key, UI_box_flag__has_text, C_TRANSPARENT, str);
-  ui_end_box();
-}
-
-B32 ui_button(Color color, const char* text, const char* key, const char* text_key)
-{
-  B32 is_pressed = false;
-  ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, key, UI_box_flag__has_backgound, color, key);
+  UI_Inputs inputs = {};
+  DefereLoop(ui_push_size_x(ui_size_text_make()), ui_pop_size_x())
+  DefereLoop(ui_push_size_y(ui_size_text_make()), ui_pop_size_y())
   {
-    ui_label(text, text_key);
-    is_pressed = ui_is_clicked();
+    inputs = ui_box_make(key, UI_box_flag__has_text|UI_box_flag__has_backgound, str);
   }
-  ui_end_box();
-  return is_pressed;
+  return inputs;
 }
 
-void ui_checkbox_entry(B32* b, U32* value, U32 value_on_pick, const char* key)
+void ui_spacer(Axis2 axis)
 {
-  // Box, label
-  Color color = (*b ? C_LIGHT_GREEN : C_BLUE);
-  ui_begin_box(UI_SizePx(30), UI_SizePx(30), Axis2_x, key, UI_box_flag__has_backgound, color, "");
+  if (axis == Axis2_x)
   {
-    if (ui_is_clicked())
+    DefereLoop(ui_push_size_x(ui_size_fit_the_parent_make()), ui_pop_size_x())
+    DefereLoop(ui_push_size_y(ui_size_px_make(5.0f)), ui_pop_size_y())
+    DefereLoop(ui_push_background_color(C_YELLOW), ui_pop_background_color()) // This is here for now to see the spacer working properly
     {
-      ToggleBool(*b);
-    }
-    if (*b)
-    {
-      *value = value_on_pick;
+      ui_box_make(str8_empty(), UI_box_flag__has_backgound|UI_box_flag__NONE, str8_empty());
     }
   }
-  ui_end_box();
+  else if (axis == Axis2_y)
+  {
+    DefereLoop(ui_push_size_x(ui_size_px_make(5.0f)), ui_pop_size_x())
+    DefereLoop(ui_push_size_y(ui_size_fit_the_parent_make()), ui_pop_size_y())
+    DefereLoop(ui_push_background_color(C_YELLOW), ui_pop_background_color()) // This is here for now to see the spacer working properly
+    {
+      ui_box_make(str8_empty(), UI_box_flag__has_backgound|UI_box_flag__NONE, str8_empty());
+    }
+  }
+  else { InvalidCodePath(); }
 }
 
-void ui_spacer()
-{
-  ui_begin_box(UI_SizeFitTheParent(), UI_SizeChildrenSum(), Axis2_x, 
-              "Fit 1", UI_box_flag__NONE, C_LIGHT_GREEN, "");
-  ui_end_box();
-}
-
-#define ui_h_stack(key) DefereLoop(ui_begin_box(UI_SizeFitTheParent(), UI_SizeChildrenSum(), \
-                                                Axis2_x, \
-                                                key, UI_box_flag__NONE, C_TRANSPARENT, ""), \
-                                   ui_end_box())
-
-#define ui_v_stack(key) DefereLoop(ui_begin_box(UI_SizeChildrenSum(), UI_SizeFitTheParent(), \
-                                                Axis2_y, \
-                                                key, UI_box_flag__NONE, C_TRANSPARENT, ""), \
-                                   ui_end_box())
 
 
 
@@ -72,7 +51,6 @@ void ui_spacer()
 
 
 
-#endif 
 
 
 

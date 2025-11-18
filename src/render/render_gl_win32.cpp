@@ -333,8 +333,6 @@ void r_gl_win32_end_frame()
     glClear(GL_COLOR_BUFFER_BIT);
 
     for (DEBUG_draw_rect_node* node = draw_list->first; node != 0; node = node->next) {
-      if (node->is_rect) { Assert(!node->is_texture); }
-      if (node->is_texture) { Assert(!node->is_rect); }
       DEV_draw_rect_list(node);
     }
   }
@@ -415,6 +413,11 @@ Texture2D load_texture(Image2D image)
   return result;
 }
 
+void unload_texture(Texture2D* texture)
+{
+  glDeleteTextures(1, &texture->gl_id);
+  texture->gl_id = 0;
+}
 
 ///////////////////////////////////////////////////////////
 // Damian: Helpers and some internal state managers
@@ -458,54 +461,49 @@ void draw_rect(Rect rect, Color color)
   DEBUG_draw_rect_list* list = g_win32_gl_renderer->draw_list;
   
   DEBUG_draw_rect_node* node = ArenaPush(frame_arena, DEBUG_draw_rect_node);
-  node->is_rect = true;
-  node->rect = rect;
-  node->rect_color = color;
+  DEBUG_draw_data* data = &node->draw_data;
+  data->kind = DEBUG_draw_data_kind__rect;
+  data->dest_rect = rect;
+  data->color = color;
 
   DllPushBack(list, node);
   list->count += 1;
 }
 
-void test_draw_texture_pro(
-  Texture2D texture, 
-  Rect texture_source_rect,
-  Rect texture_dest_rect,
-  Color color
-) {
-  // Crop the texture, then just draw it
+void test_draw_texture_pro(Texture2D texture, Rect texture_source_rect, Rect texture_dest_rect) 
+{
   Arena* frame_arena = g_win32_gl_renderer->frame_arena;
   DEBUG_draw_rect_list* list = g_win32_gl_renderer->draw_list;
   DEBUG_draw_rect_node* node = ArenaPush(frame_arena, DEBUG_draw_rect_node);
+  DEBUG_draw_data* data = &node->draw_data;
 
-  node->is_texture = true;
-  node->texture = texture;
-  node->texture_source_rect = texture_source_rect;
-  node->texture_dest_rect = texture_dest_rect;
-  node->rect_color = color;
+  data->kind = DEBUG_draw_data_kind__normal_texture;
+  data->texture = texture;
+  data->texture_source_rect = texture_source_rect;
+  data->dest_rect = texture_dest_rect;
 
   DllPushBack(list, node);
   list->count += 1;
-
-  // draw_rect(texture_dest_rect, color);
 }
 
-void test_draw_texture_crop(
-  Texture2D texture, 
-  Rect source_rect, 
-  F32 screen_offset_x, F32 screen_offset_y, 
-  Color color
+void test_draw_texture_crop(Texture2D texture, 
+                            Rect source_rect, 
+                            F32 screen_offset_x, F32 screen_offset_y
 ) {
   Rect dest_rect = rect_make(screen_offset_x, screen_offset_y, source_rect.width, source_rect.height);
-  test_draw_texture_pro(texture, source_rect, dest_rect, color);
+  test_draw_texture_pro(texture, source_rect, dest_rect);
 }
 
-// TODO: Uncomment this back
-// void test_draw_texture(Texture2D texture, F32 x, F32 y)
-// {
-  // Rect texture_rect = rect_make(0.0f, 0.0f, (F32)texture.width, (F32)texture.height);
-  // test_draw_texture_pro(texture, texture_rect, x, y);
-// }
+void test_draw_texture(Texture2D texture, F32 x, F32 y)
+{
+  Rect source_rect = rect_make(0.0f, 0.0f, (F32)texture.width, (F32)texture.height);
+  Rect dest_rect = rect_make(x, y, (F32)texture.width, (F32)texture.height);
+  test_draw_texture_pro(texture, source_rect, dest_rect);
+}
 
+///////////////////////////////////////////////////////////
+// Damian: 
+//
 // TODO: Move this 
 #include "font/font.h"
 #include "font/font.cpp"
@@ -530,7 +528,26 @@ void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32
       
       // TODO: Make sure i am not 1 px off due to range includeness
       Rect dest_rect = rect_make(x_offset + data->left_side_bearing, baseline_y - data->glyph_bbox.y1, codepoint_rect.width, codepoint_rect.height);
-      test_draw_texture_pro(font_texture, codepoint_rect, dest_rect, color);
+      
+      // Damian: This was added on 18th of November when i was trying to separeta texture and text drawing better
+      { // TODO: Dont like that this is just a copy paste from the real draw_rect_pro call ((
+        // NOTE: Another way to do this, mighte be to just ask to get a data node but then fill it up myself differently in different places  
+        Arena* frame_arena = g_win32_gl_renderer->frame_arena;
+        DEBUG_draw_rect_list* list = g_win32_gl_renderer->draw_list;
+        DEBUG_draw_rect_node* node = ArenaPush(frame_arena, DEBUG_draw_rect_node);
+        DEBUG_draw_data* draw_data = &node->draw_data;
+
+        draw_data->kind = DEBUG_draw_data_kind__text_texture;
+        draw_data->texture = font_texture;
+        draw_data->texture_source_rect = codepoint_rect;
+        draw_data->dest_rect = dest_rect;
+        draw_data->color = color;
+
+        DllPushBack(list, node);
+        list->count += 1;
+      }
+      
+      // test_draw_texture_pro(font_texture, codepoint_rect, dest_rect, color);
       
       x_offset += data->advance_width;
       if (index < text.count - 1)
@@ -582,28 +599,20 @@ void test_draw_text_lines(Font_info* font_info, Str8 text, F32 x, F32 y)
 
 void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
 {
-  B32 is_rect       = node->is_rect;
-  B32 is_texture    = node->is_texture;
-  Rect rect         = node->rect;
-  Color rect_color  = node->rect_color;
-
-  Texture2D texture = node->texture;
-  Rect texture_source_rect = node->texture_source_rect;
-  Rect texture_dest_rect = node->texture_dest_rect;
-  if (is_texture) {
-    rect = texture_dest_rect;
-    // TODO: This has to be unionised here, 
-    //       now is time (tonight is the night).
-    //       Cause its getting a bit out of hand now.
-  }
-
   Assert(is_rect_program_loaded);
   Assert(g_win32_gl_renderer->viewport_rect__top_left_to_bottom_right);
-  
+
+  DEBUG_draw_data* data = &node->draw_data;
+  Texture2D texture        = data->texture;
+  B32 kind                 = data->kind;
+  Rect dest_rect           = data->dest_rect;
+  Color color              = data->color;
+  Rect texture_source_rect = data->texture_source_rect;
+
   Rect vp_rect = *(g_win32_gl_renderer->viewport_rect__top_left_to_bottom_right); 
 
-  Mat4 mat4_scale     = mat4x4_f32_scale(rect.width, rect.height, 1);
-  Mat4 mat4_translate = mat4x4_f32_translate(rect.x, rect.y, 0);
+  Mat4 mat4_scale     = mat4x4_f32_scale(dest_rect.width, dest_rect.height, 1);
+  Mat4 mat4_translate = mat4x4_f32_translate(dest_rect.x, dest_rect.y, 0);
   Mat4 mat4_ortho     = mat4x4_f32_ortho(0, vp_rect.width, vp_rect.height, 0, -1, 1);
   
   glBindVertexArray(rect_vao_id);    
@@ -622,32 +631,35 @@ void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
   glUniform1f(glGetUniformLocation(rect_program_id, "t_source_rect_width"), texture_source_rect.width);
   glUniform1f(glGetUniformLocation(rect_program_id, "t_source_rect_height"), texture_source_rect.height);
 
-  if (is_texture)
+  if (kind == DEBUG_draw_data_kind__rect)
   {
+    glUniform1i(glGetUniformLocation(rect_program_id, "program_sub_type"), 1);
+    glUniform4f(glGetUniformLocation(rect_program_id, "color"), color.r, color.g, color.b, color.a);
+  }
+  else if (kind == DEBUG_draw_data_kind__normal_texture)
+  {
+    glUniform1i(glGetUniformLocation(rect_program_id, "program_sub_type"), 2);
     glUniform1i(glGetUniformLocation(rect_program_id, "is_texture1"), GL_TRUE); 
     glUniform1i(glGetUniformLocation(rect_program_id, "texture1"), 0);
-    glUniform4f(glGetUniformLocation(rect_program_id, "rect_color"), rect_color.r, rect_color.g, rect_color.b, rect_color.a); 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture.gl_id);
   }
-  else if (is_rect) 
+  else if (kind == DEBUG_draw_data_kind__text_texture)
   {
-    glUniform1i(glGetUniformLocation(rect_program_id, "is_texture1"), GL_FALSE); 
-    glUniform4f(glGetUniformLocation(rect_program_id, "rect_color"), rect_color.r, rect_color.g, rect_color.b, rect_color.a); 
+    glUniform1i(glGetUniformLocation(rect_program_id, "program_sub_type"), 3);
+    glUniform1i(glGetUniformLocation(rect_program_id, "is_texture1"), GL_TRUE); 
+    glUniform1i(glGetUniformLocation(rect_program_id, "texture1"), 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture.gl_id);
   }
-  else {
-    InvalidCodePath();
-  }
+  else { InvalidCodePath(); }
 
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-  // glActiveTexture(0);
-  // glBindTexture(GL_TEXTURE_2D, 0);
+  glBindTexture(GL_TEXTURE_2D, 0);
   glBindVertexArray(0);
   glUseProgram(0);
 }
-
-// WIN32_LEAN_AND_MEAN
 
 ///////////////////////////////////////////////////////////
 // Damian: Program loader
@@ -735,31 +747,40 @@ void gl_load_rect_program()
       StringLine("}"),
     };
 
+    // - Just a rect
+    // - A normal texture
+    // - A text texture
     const char* f_shader_src[] = {
       StringLine("#version 330 core"),
       StringNewL,
       StringLine("in vec2 TextureCoord;"),
       StringNewL,
-      StringLine("uniform bool is_texture1;"),
-      StringLine("uniform sampler2D texture1;"),
-      // StringNewL,
-      // StringLine("uniform bool is_text;"),
-      // StringLine("uniform fload text_alpa;"),
+      StringLine("uniform int program_sub_type;"),
       StringNewL,
-      StringLine("uniform vec4 rect_color;"),
+      StringLine("// Data for sub_type==1 (rect) --> color"),
+      StringLine("// Data for sub_type==2 (normal_texture) --> texure1"),
+      StringLine("// Data for sub_type==2 (text_texture) --> texure1 + color"),
+      StringLine("uniform vec4 color;"),
+      StringNewL,
+      StringLine("uniform sampler2D texture1;"),
+
       StringNewL,
       StringLine("out vec4 FragColor;"),
       StringNewL,
       StringLine("void main()"),
       StringLine("{"),
-      StringLine("  if (is_texture1)"),
+      StringLine("  if (program_sub_type == 1)"),
+      StringLine("  {"),
+      StringLine("    FragColor = color;"),
+      StringLine("  }"),
+      StringLine("  else if (program_sub_type == 2)"),
       StringLine("  {"),
       StringLine("    FragColor = texture(texture1, TextureCoord);"), 
-      StringLine("    FragColor = vec4(rect_color.rgb, FragColor.a);"), 
       StringLine("  }"),
-      StringLine("  else"),
+      StringLine("  else if (program_sub_type == 3)"),
       StringLine("  {"),
-      StringLine("    FragColor = rect_color;"),
+      StringLine("    FragColor = texture(texture1, TextureCoord);"), 
+      StringLine("    FragColor = vec4(color.rgb, FragColor.a);"), 
       StringLine("  }"),
       StringLine("}"),
     };
@@ -830,10 +851,6 @@ void gl_load_rect_program()
   rect_vao_id            = vao; 
   rect_program_id        = program;
 }
-
-
-
-
 
 
 

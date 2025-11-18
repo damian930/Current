@@ -56,11 +56,15 @@ void EntryPoint()
 
   Arena* process_arena = arena_alloc(Megabytes_U64(10), "Process arena");
   Process_data_list* list = get_all_process_data(process_arena);
-  for (Process_data_node* node = list->first; node != 0; node = node->next)
-  {
-    Str8 path = str8_temp_from_str8(node->process_data.path); //str8_temp_from_str8(node->process_data.path);
-    printf("Path: %s \n", path.data);
-  }
+  // for (Process_data_node* node = list->first; node != 0; node = node->next)
+  // {
+  //   Str8 path = str8_temp_from_str8(node->process_data.path); //str8_temp_from_str8(node->process_data.path);
+  //   printf("Path: %s \n", path.data);
+  // }
+
+  Arena* image_arena = arena_alloc(Megabytes_U64(30), "Image test arena");
+  Image2D jimmy_image = load_png(image_arena, Str8FromClit(image_arena, "../data/jimmy.png"), false);
+  Texture2D jimmy_texture = load_texture(jimmy_image);
   
   Win32_window* window = 0;
   DefereLoop(window = win32_create_window(), win32_close_window(window)) 
@@ -92,50 +96,56 @@ void EntryPoint()
               DefereLoop(ui_push_padding_color(C_LIGHT_GREEN), ui_pop_padding_color())
               DefereLoop(ui_push_child_gap_color(C_MAGENTA), ui_pop_child_gap_color())
               DefereLoop(ui_push_layout_axis(Axis2_y), ui_pop_layout_axis())
-              UI_BoxLoop(Str8FromClit(str_arena, "Key v stack"), UI_box_flag__has_backgound|UI_box_flag__draw_padding|UI_box_flag__draw_child_gap, str8_empty())
+              UI_BoxLoop(Str8FromClit(str_arena, "Image test"), UI_box_flag__NONE, str8_empty())
               {
-                U32 node_index = 0;
-                for (Process_data_node* node = list->first; node != 0; node = node->next, node_index += 1)
+                DefereLoop(ui_push_size_x(ui_size_px_make(500)), ui_pop_size_x())
+                DefereLoop(ui_push_size_y(ui_size_px_make(500)), ui_pop_size_y())
                 {
-                  DefereLoop(ui_push_size_x(ui_size_child_sum_make()), ui_pop_size_x())
-                  DefereLoop(ui_push_size_y(ui_size_child_sum_make()), ui_pop_size_y())
-                  DefereLoop(ui_push_layout_axis(Axis2_x), ui_pop_layout_axis())
-                  DefereLoop(ui_push_background_color(C_RED), ui_pop_background_color())
-                  UI_BoxLoop(Str8FromClit(str_arena, "Row"), UI_box_flag__has_backgound, str8_empty())
+                  UI_BoxLoop(Str8FromClit(str_arena, "Image test"), UI_box_flag__NONE, str8_empty())
                   {
-                    // Label
-                    DefereLoop(ui_push_background_color(C_BLUE), ui_pop_background_color())
-                    DefereLoop(ui_push_size_x(ui_size_text_make()), ui_pop_size_x())
-                    DefereLoop(ui_push_size_y(ui_size_text_make()), ui_pop_size_y())
-                    {
-                      ui_box_make(Str8FromClit(str_arena, "row key"), UI_box_flag__has_text|UI_box_flag__has_backgound, get_file_basename(node->process_data.path));
-                    }
-                    
-                    DefereLoop(ui_push_size_x(ui_size_fit_the_parent_make()), ui_pop_size_x())
-                    DefereLoop(ui_push_size_y(ui_size_px_make(5.0f)), ui_pop_size_y())
-                    DefereLoop(ui_push_background_color(C_YELLOW), ui_pop_background_color())
-                    {
-                      ui_box_make(Str8FromClit(str_arena, "row key"), UI_box_flag__has_backgound, str8_empty());
-                    }
-
-                    // Label
-                    DefereLoop(ui_push_background_color(C_BLUE), ui_pop_background_color())
-                    DefereLoop(ui_push_size_x(ui_size_text_make()), ui_pop_size_x())
-                    DefereLoop(ui_push_size_y(ui_size_text_make()), ui_pop_size_y())
-                    {
-                      ui_box_make(Str8FromClit(str_arena, "row key"), UI_box_flag__has_text|UI_box_flag__has_backgound, time_as_str8(str_arena, node->process_data.creation_time));
-                    }
-
+                    ui_set_texture(jimmy_texture);
                   }
                 }
-                      
               }
+              
+              // UI_BoxLoop(Str8FromClit(str_arena, "Key v stack"), UI_box_flag__has_backgound|UI_box_flag__draw_padding|UI_box_flag__draw_child_gap, str8_empty())
+              // {
+              //   U32 node_index = 0;
+              //   for (Process_data_node* node = list->first; node != 0; node = node->next, node_index += 1)
+              //   {
+              //     DefereLoop(ui_push_size_x(ui_size_child_sum_make()), ui_pop_size_x())
+              //     // DefereLoop(ui_push_size_y(ui_size_child_sum_make()), ui_pop_size_y())
+              //     // DefereLoop(ui_push_size_x(ui_size_percent_of_parent_make(1)), ui_pop_size_x())
+              //     DefereLoop(ui_push_size_y(ui_size_child_sum_make()), ui_pop_size_y())
+              //     DefereLoop(ui_push_layout_axis(Axis2_x), ui_pop_layout_axis())
+              //     DefereLoop(ui_push_background_color(C_RED), ui_pop_background_color())
+              //     UI_BoxLoop(Str8FromClit(str_arena, "Row"), UI_box_flag__has_backgound, str8_empty())
+              //     {
+              //       DefereLoop(ui_push_background_color(C_BLUE), ui_pop_background_color())
+              //       {
+              //         ui_label(Str8FromClit(str_arena, "row key"), get_file_basename(node->process_data.path));
+              //       }
+
+              //       ui_spacer(Axis2_x);
+                    
+              //       DefereLoop(ui_push_background_color(C_BLUE), ui_pop_background_color())
+              //       {
+              //         ui_label(Str8FromClit(str_arena, "row key"), time_as_str8(str_arena, node->process_data.creation_time));
+              //       }
+
+              //     }
+              //   }
+                      
+              // }
             }
+            // draw_rect(rect_make(50, 50, 100, 200), C_RED);
+            // test_draw_texture(jimmy_texture, 100, 100);
+            // test_draw_text(font_info, font_texture, Str8FromClit(str_arena, "Flopper"), 200, 200, C_BLUE);
             ui_draw_ui();
           } 
             
-        } // r_gl_win32_end_frame()
-      } // while (!win32_window_shoud_close(window))
+        } 
+      } 
 
     }
   }

@@ -263,6 +263,64 @@ void ui_end_box()
   -- Final pass to create the on screen rects
 */
 
+// TODO
+// TEST
+// F32 ui_get_size_accounted_for_padding_and_gap(UI_Box* root, Axis2 axis, F32 total_children_sum)
+// {
+//   if (root->children_count > 0)
+//   {
+//     total_size_on_axis += 2 * root->padding; //ui_current_padding();
+//     if (root->layout_axis == axis)
+//     {
+//       total_size_on_axis += (root->children_count - 1) * root->child_gap; //ui_current_child_gap();
+//     }
+//   }
+// }
+
+// F32 ui_DEBUG_get_total_children_size(UI_Box* box, Axis2 axis)
+// {
+//   F32 total_children_sum = 0.0f;
+//   if (box->layout_axis == axis)
+//   {
+//     for (UI_Box* child = box->first; child != 0; child = child->next)
+//     {
+//       total_children_sum += child->computed_sizes[axis];
+//     }
+//   }
+//   else 
+//   {
+//     total_children_sum = 
+//   }
+//   return total_children_sum;
+// } 
+
+// F32 normal_parent_total_padding_gap_size = ui_DEBUG_get_total_padding_gap_size(normal_parent, axis);
+
+// F32 ui_DEBUG_get_total_space_left(UI_Box* root, Axis2 axis)
+// {
+//   // Size has to be computes for us to know how much space is left or overused
+//   Assert(root->is_size_computed); 
+
+//   F32 total_space_used = 0.0f;
+//   if (root->layout_axis == axis)
+//   {
+//     for (UI_Box* child = root->first; child != 0; child = child->next)
+//     {
+//       total_space_used += child->computed_sizes[axis];
+//     }
+//     if (root->children_count > 0) 
+//     {
+//       total_space_used += 2 * root->padding;
+//       if (root->children_count > 1) 
+//     }
+//   }
+//   else 
+//   {
+//     total_children_sum = 
+//   }
+//   return total_children_sum;
+// }
+
 void ui_sizing_for_fixed_sized_elements(UI_Box* root, Axis2 axis)
 {
   switch (root->semantic_size[axis].kind)
@@ -324,26 +382,21 @@ void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
         }
       } 
 
-      // Padding and stuff
+
+      // Damian: Padding and stuff.
+      //         This is here manually since child_sum sizing requires special bahaviour that cant be pulled out nicely.
+      //         In particular, it doesnt use padding if there are no children 
+      // TODO: See that this does if i have no children inside such element and then on the sides normal elements, child gap will be used twice
+      ///      Maybe it would be nice in this case to just remove this box from the tree, since it is zero sized in both axes
       if (root->children_count > 0)
       {
-        total_size_on_axis += 2 * root->padding; //ui_current_padding();
+        total_size_on_axis += 2 * root->padding; 
         if (root->layout_axis == axis)
         {
-          total_size_on_axis += (root->children_count - 1) * root->child_gap; //ui_current_child_gap();
+          total_size_on_axis += (root->children_count - 1) * root->child_gap; 
         }
       }
-
-      // if (root->has_min_size[axis] && total_size_on_axis < root->min_size[axis])
-      // {
-      //   total_size_on_axis = root->min_size[axis];
-      // }
-
-      // if (root->has_max_size[axis] && total_size_on_axis > root->max_size[axis])
-      // {
-      //   total_size_on_axis = root->max_size[axis];
-      // }
-
+    
       root->computed_sizes[axis] = total_size_on_axis;
 
     } break;
@@ -364,6 +417,8 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
 
     case UI_size_kind_percent_of_parent:
     {
+      // NotImplemented(); // Dont want to deal with this along fit parent at the same time for now
+
       UI_Box* usable_parent = 0;
       for (UI_Box* test_parent = root->parent; test_parent != 0; test_parent = test_parent->parent)
       {
@@ -373,6 +428,9 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
           break;
         }
       }
+
+      // TODO: Paddng and child gap for root 1 
+      F32 ui_DEBUG_get_box_usable_spece_left();
 
       // TODO: I dont know yet, weather i want to be getting the * value here for the usable parent or the root tho
       F32 size = usable_parent->computed_sizes[axis] * root->semantic_size[axis].value;
@@ -392,9 +450,149 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
 
     case UI_size_kind_fit_the_parent:
     {
-      // Fit the parent
-      // Recurese to children
+      U32 children_count_with_fit_the_parent_sizing_scheme = 0;
+      for (UI_Box* child = root->parent->first; child != 0; child = child->next)
+      {
+        if (child->semantic_size[axis].kind == UI_size_kind_fit_the_parent) {
+          children_count_with_fit_the_parent_sizing_scheme += 1;
+        }
+      }
+      if (children_count_with_fit_the_parent_sizing_scheme > 1)
+      {
+        // Damian: Multiple spacers inside a single child parent is not yet supported
+        NotImplemented();
+      }
 
+      // Code path for stretching to an immidiate parent with px like width
+      if (root->parent->semantic_size[axis].kind != UI_size_kind_children_sum)
+      {
+        // Parent pusts in its layout axis either way every time, where do i stretch then
+        // If its alyout axis is x and i stretch in x, then i have to get the children sum, get the parent size, get the size left and stretch to that space
+        // If i stretch in y then i just use the space that was given to me in x and in y i just become the size of the parent in y
+        // X here is the parent layout axis and y is not, so just do == and != for that
+
+        // TODO: See how elemetns calculate fit eleements, do they aply padding and child gap to them.
+        //       What if there is no space to fit, then child gap still gets applied tho.
+
+        // TODO: What if i have elements inside fit the parent, then what?
+        //       How are they all sizes and it what order then?
+
+       // TODO: Paddng and child gap for root 1 
+        UI_Box* normal_parent = root->parent;
+        F32 total_size = normal_parent->computed_sizes[axis];
+        F32 size_used = 0.0f;
+
+        if (normal_parent->layout_axis == axis) // Here we stretch based on the space left
+        { 
+          for (UI_Box* child = normal_parent->first; child != 0; child = child->next)
+          {
+            size_used += child->computed_sizes[axis];
+          }
+          size_used += 2 * normal_parent->padding;
+          if (normal_parent->children_count > 0)
+          {
+            size_used -= (normal_parent->children_count - 1) * normal_parent->child_gap;
+          }
+        }
+        else // Here we just get the other size for the parent, since that no where he lays out elements
+        { 
+          size_used -= 2 * normal_parent->padding;
+        }
+        root->computed_sizes[axis] = total_size - size_used;
+      }
+      else 
+      { // Code path for stretching to a non immidiate parent
+
+        /* NOTES for the case when we have fit inside child sum, but child sum is immediately inside the px like sizes box
+        We want to get the usable px sized parent to get the size inside of it that is not used by elements.
+        A part of the takes size for that usable parent will be takes by out child sum sized immediate parent.
+        The size left for the usable parent we get is the size that we have to extend its (our) child sum box to.
+        Now we know the final size of the child sum box, but we still need the size for the fit box, so the elements inside the child sum box are positioned correctly.
+        We do the same here, we get all the children sums, paddings, gaps and fits the space we have left for children elements. 
+        Then we just set value to be the size on that axis for the fit parent sized box.
+
+        // TODO: Dont yet know how it shoud work when we have nested fitting
+        */
+
+        UI_Box* usable_parent = 0;
+        for (UI_Box* test_parent = root->parent; test_parent != 0; test_parent = test_parent->parent)
+        {
+          if (test_parent->semantic_size[axis].kind != UI_size_kind_children_sum)
+          {
+            usable_parent = test_parent;
+            break;
+          }
+        }
+        Assert(usable_parent->semantic_size[axis].kind != UI_size_kind_fit_the_parent); // Damian: Not sure yet what this means semantically
+        Assert(usable_parent);
+
+        if (usable_parent == root->parent->parent)
+        { 
+          // Get the size left in the parent to fill up
+          F32 usable_parent_total_size = usable_parent->computed_sizes[axis];
+          F32 usable_parent_used_space = 0.0f;
+          {
+            // If we stretch to the layou axis of the parent then we need to accound for children sizes
+            // Otherwise we just stretch to the size of the non layout axis whitch is sigle floored kind of in a way
+            if (usable_parent->layout_axis == axis)
+            {
+        // TODO: Padding and child gap for root 1 
+
+              for (UI_Box* child = usable_parent->first; child != 0; child = child->next)
+              {
+                usable_parent_used_space += child->computed_sizes[axis];
+              }
+              usable_parent_used_space += 2 * usable_parent->padding;
+              if (usable_parent->children_count > 1)
+              {
+                usable_parent_used_space += (usable_parent->children_count - 1) * usable_parent->child_gap;
+              }
+            }
+            else
+            {
+              usable_parent_used_space += 2 * usable_parent->padding;
+            }
+          }
+
+          // Getting the size left in the root->parent children to see what we can stretch into inside of it
+          F32 children_sum_parent_total_size = usable_parent_total_size - usable_parent_used_space; // TODO: What if its already bigger than this and overfowing
+          F32 children_sum_parent_used_size = 0.0f;
+          {
+            // We here know that the the axis into which we stretch is the same axis for out child sum parent for children sum axis,
+            // But out children sum parent still has a layout axis, so we have to accound for that.
+            if (root->parent->layout_axis == axis)
+            {
+            // TODO: Paddng and child gap for root 1 
+              
+              for (UI_Box* child = root->parent->first; child != 0; child = child->next)
+              {
+                children_sum_parent_used_size += child->computed_sizes[axis];
+              }
+              children_sum_parent_used_size += 2 * root->parent->padding;
+              if (root->parent->children_count > 1)
+              {
+                children_sum_parent_used_size += (root->parent->children_count - 1) * root->parent->child_gap;
+              }
+            }
+            else 
+            {
+              children_sum_parent_used_size += 2 * root->parent->padding;
+            }
+          }
+
+          // Getting the size left for us to stretch into
+          F32 size_left_to_stretch_into = children_sum_parent_total_size - children_sum_parent_used_size; // TODO: What if its already bigger than this and overfowing
+          root->computed_sizes[axis] = size_left_to_stretch_into;
+        }
+        else // Multi layer fitting is not yet supported
+        {
+          NotImplemented();
+        }
+
+
+      }
+
+      // Get the usable parent to fit to (TODO: This might need a better comment here)
       UI_Box* usable_parent = 0;
       for (UI_Box* test_parent = root->parent; test_parent != 0; test_parent = test_parent->parent)
       {
@@ -405,43 +603,11 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
         }
       }
 
-      // Get the size to which we can extend
-      F32 size = usable_parent->computed_sizes[axis];
-      F32 total_chilren_size = 0.0f;
-      for (UI_Box* child = usable_parent->first; child != 0; child = child->next)
-      {
-        if (usable_parent->layout_axis == axis) {
-          total_chilren_size += child->computed_sizes[axis];
-        } else {
-          total_chilren_size = usable_parent->computed_sizes[axis] - usable_parent->padding * 2;
-          break;
-        }
-      }
-      size -= total_chilren_size;
-
-      // TODO:
-      //      Accound for 2 paddings, the parent and the usable parent if the first parent was the child sum element
-      //      Also if we have multiple child sums in a row, then we have to account for that amound of possible paddings
-      F32 total_padding_across_levels = root->parent->padding;
-      for (UI_Box* test_parent = root->parent; test_parent != usable_parent->parent && test_parent != 0; test_parent = test_parent->parent)
-      {
-        if (root->parent == test_parent) continue;
-        total_padding_across_levels += test_parent->padding;
-      }
-
-      size -= total_padding_across_levels;
-      if (usable_parent->layout_axis == axis)
-      {
-        size -= (root->parent->children_count - 1) * root->parent->child_gap; 
-      }
-
-      root->computed_sizes[axis] = size;
-
       for (UI_Box* child = root->first; child != 0; child = child->next)
       {
         ui_sizing_for_parent_dependant_elements(child, axis);
       }
-
+      
     } break;
   }
 
@@ -537,6 +703,16 @@ void ui_draw_ui_helper(UI_Box* root)
       root->computed_final_rect.x, 
       root->computed_final_rect.y);
     #endif
+  }
+
+  if (root->flags & UI_box_flag__has_texture)
+  {
+    // Load the image onto the gpu
+    // Get the texture and draw the texture filling the area of the box
+    Texture2D texture = root->texture;
+    Rect texture_source_rect = rect_make(0.0f, 0.0f, (F32)texture.width, (F32)texture.height);
+    Rect texture_dest_rect = root->computed_final_rect;
+    test_draw_texture_pro(texture, texture_source_rect, texture_dest_rect);
   }
 
   if (root->flags & UI_box_flag__draw_padding)

@@ -161,18 +161,26 @@ struct Texture2D {
   U32 n_chanels;
 };
 
+// TODO: Make so there is no way to just change them her but not change them inside the shader
+enum DEBUG_draw_data_kind {
+  DEBUG_draw_data_kind__rect,
+  DEBUG_draw_data_kind__normal_texture,
+  DEBUG_draw_data_kind__text_texture,
+};
+
+struct DEBUG_draw_data {
+  DEBUG_draw_data_kind kind;
+  Texture2D texture;
+
+  Rect dest_rect;
+  Color color;
+  Rect texture_source_rect;
+};
+
 struct DEBUG_draw_rect_node {
   DEBUG_draw_rect_node* prev;
   DEBUG_draw_rect_node* next;
-  
-  B32 is_texture;
-  B32 is_rect;
-  Rect rect;
-  Color rect_color;
-  
-  Texture2D texture;
-  Rect texture_source_rect;
-  Rect texture_dest_rect;
+  DEBUG_draw_data draw_data;  
 };
 
 struct DEBUG_draw_rect_list {
@@ -229,6 +237,7 @@ void r_gl_win32_set_frame_rate(U32 frame_rate);
 F64 r_gl_win32_get_frame_rate();
 
 Texture2D load_texture(Image2D image);
+void unload_texture(Texture2D* texture);
 
 ///////////////////////////////////////////////////////////
 // Damian: Helpers and some internal state managers

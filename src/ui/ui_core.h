@@ -63,12 +63,15 @@ struct UI_size {
 
 enum UI_box_flag : U32 {
   UI_box_flag__NONE            = (1 << 0),
+  // Regular features
   UI_box_flag__has_backgound   = (1 << 1),
   UI_box_flag__has_text        = (1 << 2),
-  UI_box_flag__clickable       = (1 << 3),
-  // TODO: I dont know what i want to do with these for now, since they kinda work differently from the other once
-  UI_box_flag__draw_padding    = (1 << 4),
-  UI_box_flag__draw_child_gap  = (1 << 5),
+  UI_box_flag__has_texture     = (1 << 3),
+  // Interactions
+  UI_box_flag__clickable       = (1 << 4),
+  // Extra drawings
+  UI_box_flag__draw_padding    = (1 << 5),
+  UI_box_flag__draw_child_gap  = (1 << 6),
 };
 typedef U32 UI_box_flags;
 
@@ -95,6 +98,7 @@ struct UI_Box {
   // Extra features
   UI_box_flags flags;
   Str8 text;
+  Texture2D texture;
   Color text_color;
   Color backgound_color;
   Color padding_color;
@@ -109,6 +113,7 @@ struct UI_Box {
   // F32 max_size[Axis2_COUNT];
 
   // Sizing pass data
+  B32 is_size_computed;
   F32 computed_sizes[Axis2_COUNT];
   F32 computed_parent_rel_pos[Axis2_COUNT];
   Rect computed_final_rect;
@@ -143,6 +148,15 @@ struct UI_state {
 };
 
 global UI_state* g_ui_state = 0;
+
+// TODO: Remove this, this is here for debug now
+void ui_set_texture(Texture2D texture)
+{
+  UI_Box* root = g_ui_state->current_parent;
+  root->flags |= UI_box_flag__has_texture;
+  root->texture = texture;
+}
+// ---------------------------------------------
 
 // Extra accesors
 UI_size ui_size_make(UI_size_kind kind, F32 value);
