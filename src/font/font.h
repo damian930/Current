@@ -12,6 +12,8 @@
   #include "third_party/stb/stb_truetype.h"
 #endif
 
+// TODO: Support codepoints like space that have width and height, but are not represented with a texture or a bb on atlas for plyph
+
 struct Font_codepoint_data_node {
   Font_codepoint_data_node* next;
   Font_codepoint_data_node* prev;

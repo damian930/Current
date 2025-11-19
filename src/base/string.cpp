@@ -132,7 +132,7 @@ Str8 str8_from_list(Arena* arena, Str8_list* list)
   return str;
 }
 
-B32 str8_match(Str8 str, Str8 other, U32 flags)
+B32 str8_match(Str8 str, Str8 other, Str8_match_flags flags)
 {
   B32 result = true;
   if (str.count != other.count) 
@@ -164,7 +164,7 @@ B32 str8_match(Str8 str, Str8 other, U32 flags)
   return result;
 }
 
-B32 str8_match_cstr(Str8 str, const char* c_str, U32 flags)
+B32 str8_match_cstr(Str8 str, const char* c_str, Str8_match_flags flags)
 {
   B32 result = false;
   Scratch scratch = get_scratch();
@@ -176,24 +176,30 @@ B32 str8_match_cstr(Str8 str, const char* c_str, U32 flags)
   return result;
 }
 
-Str8 str8_substring(Str8 str, U64 start_index, U64 end_index)
+Str8 str8_substring_range(Str8 str, Range_U64 range)
 {
   Str8 result = {};
   {
-    if (start_index > end_index) {
-      SwapVaues(U64, start_index, end_index);
+    if (range.min > range.max) {
+      SwapVaues(U64, range.min, range.max);
     }
-    end_index = Min(end_index, str.count);
-    if (start_index < end_index)
+    range.max = Min(range.max, str.count);
+    if (range.min < range.max)
     {
-      result.data = str.data + start_index;
-      result.count = end_index - start_index;
+      result.data = str.data + range.min;
+      result.count = range.max - range.min;
     }
   }
   return result;
 }
 
-Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, U32 flags)
+Str8 str8_sunbstring_index(Str8 str, U64 start_index, U64 index_1_after_last)
+{
+  Str8 sub_str = str8_substring_range(str, range_u64(start_index, index_1_after_last));
+  return sub_str;
+}
+
+Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, Str8_match_flags flags)
 {
   Str8_list list = {};
   if (str.count > sep.count) 
@@ -206,10 +212,10 @@ Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, U32 flags)
       if ((str.count - char_index) < sep.count) { 
         break; 
       }
-      Str8 test_sep = str8_substring(str, char_index, char_index + sep.count);
+      Str8 test_sep = str8_substring_range(str, range_u64(char_index, char_index + sep.count));
       if (str8_match(test_sep, sep, flags))
       {
-        Str8 sub_str = str8_substring(str, sub_string_start_index, char_index);
+        Str8 sub_str = str8_substring_range(str, range_u64(sub_string_start_index, char_index));
         str8_list_push_str(arena, &list, sub_str);
         sub_string_start_index = char_index + test_sep.count; // Removing the separator as well
         char_index += test_sep.count;
@@ -218,20 +224,19 @@ Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, U32 flags)
     }
     if (is_sub_string_left)
     {
-        Str8 sub_string = str8_substring(str, sub_string_start_index, str.count);
+        Str8 sub_string = str8_substring_range(str, range_u64(sub_string_start_index, str.count));
         str8_list_push_str(arena, &list, sub_string);
     }
   }
   return list;
 }
 
-
-Str8_list str8_split_by_cstr(Arena* arena, Str8 str, const char* sep, U32 flags)
+Str8_list str8_split_by_cstr(Arena* arena, Str8 str, const char* sep, Str8_match_flags flags)
 {
   Str8_list list = {};
   Scratch scratch = get_scratch();
   {
-    list = str8_split_by_str8(arena, str, Str8FromClit(scratch.arena, sep), flags);
+    list = str8_split_by_str8(arena, str, str8_from_cstr(scratch.arena, sep), flags);
   }
   end_scratch(&scratch);
   return list;

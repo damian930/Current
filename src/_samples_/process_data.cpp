@@ -10,8 +10,120 @@
 #include <tlhelp32.h>	
 #include <psapi.h>
 #pragma comment(lib, "Kernel32.lib")
-// #pragma comment(lib, "Psapi.lib")
 
+void test_getting_data_from_processes()
+{
+  HANDLE snapshot_handle = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, Null);
+  Assert(snapshot_handle != INVALID_HANDLE_VALUE); 
+
+  // Get all the handles for all the proccesss here
+  {
+    PROCESSENTRY32 process_entry = {};
+    Process32First(snapshot_handle, &process_entry); // TODO: Might fail 
+    process_entry.dwSize = sizeof(PROCESSENTRY32);
+    
+    U32 counter = 0;
+    do 
+    {
+      DefereLoop(printf("--%d-----------------------------\n", ++counter), printf("\n"))
+      {
+
+        HANDLE process_handle = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, process_entry.th32ProcessID);
+        if (process_handle)
+        {
+          // Getting the process file path
+          {
+            Str8 name = {};
+            Scratch scratch = get_scratch();
+            {
+              Data_buffer name_buffer = data_buffer_make(scratch.arena, 512);
+              U32 bytes_written_no_nt = name_buffer.count;  
+              BOOL succ = QueryFullProcessImageNameA(process_handle, 0, (CHAR*)name_buffer.data, (DWORD*)&bytes_written_no_nt); 
+              if (succ) 
+              {
+                name = str8_substring_range(name_buffer, range_u64(0, bytes_written_no_nt));
+              }
+            }
+            printf("Name: %s \n", str8_temp_from_str8(name).data);
+            end_scratch(&scratch);
+          }
+          
+          // Getting process times
+          {
+            FILETIME f_creation_time = {}; 
+            FILETIME f_exit_time     = {};
+            FILETIME f_kernel_time   = {};
+            FILETIME f_user_time     = {};
+            BOOL succ = GetProcessTimes(process_handle, &f_creation_time, &f_exit_time, &f_kernel_time, &f_user_time);
+            Assert(succ);
+            
+            SYSTEMTIME s_creation_time = {}; 
+            SYSTEMTIME s_exit_time     = {};
+            SYSTEMTIME s_kernel_time   = {};
+            SYSTEMTIME s_user_time     = {};
+            BOOL succ1 = FileTimeToSystemTime(&f_creation_time, &s_creation_time);
+            BOOL succ2 = FileTimeToSystemTime(&f_exit_time, &s_exit_time);
+            BOOL succ3 = FileTimeToSystemTime(&f_kernel_time, &s_kernel_time);
+            BOOL succ4 = FileTimeToSystemTime(&f_user_time, &s_user_time);
+            Assert(succ1);
+            Assert(succ2);
+            Assert(succ3);
+            Assert(succ4);
+          }
+        }
+        else {
+          CloseHandle(process_handle);
+        }
+      }
+    }
+    while (Process32Next(snapshot_handle, &process_entry)); 
+    // This also return win32 error code 18 when returns fals and exits the while loop
+  }
+    
+  CloseHandle(snapshot_handle);
+}
+
+
+///////////////////////////////////////////////////////////
+// Damian: Main entry point
+//
+void EntryPoint();
+
+int main()
+{
+  DefereLoop(os_win32_state_init(), os_win32_state_release())
+  {
+    EntryPoint();
+  }
+
+  return 0;
+} 
+
+/* Features:
+  [] - Active process
+  [] - Process name 
+  [] - Process start time 
+  [] - Process active duration time 
+  [] - Process icon 
+  [] - Process filtering
+       [] - Apps (Telegram, HS, Fortnite ...)  
+  [] - 
+  [] - 
+  [] - 
+  [] - 
+  [] - 
+*/
+
+void EntryPoint()
+{
+  Arena* arena = arena_alloc(Kilobytes_U64(100), "Process sample arena");
+  printf("--- Getting data : Start --- \n");
+  test_getting_data_from_processes();
+  printf("--- Getting data : End --- \n");
+
+}
+
+#if 0
 ///////////////////////////////////////////////////////////
 // Damian: Sample code
 //
@@ -195,86 +307,4 @@ void EntryPoint()
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif

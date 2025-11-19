@@ -3,6 +3,7 @@
 
 #include "process_tracker.h"
 
+#if 1
 Win32_snapshot_process_list* win32_get_snapshot_and_process_handles(Arena* arena)
 {
   Win32_snapshot_process_list* result_list = ArenaPush(arena, Win32_snapshot_process_list);
@@ -77,7 +78,7 @@ Process_data_list* get_all_process_data(Arena* arena)
           end_scratch(&scratch);
           if (succ) 
           {
-            Str8 name = str8_substring(name_buffer, 0, bytes_written_no_nt);
+            Str8 name = str8_substring_range(name_buffer, range_u64(0, bytes_written_no_nt + 1));
             process_data->path = str8_from_str8(arena, name);
           }
         }
@@ -124,8 +125,7 @@ Process_data_list* get_all_process_data(Arena* arena)
   }
   return result_list;
 }
-
-
+#endif
 
 
 

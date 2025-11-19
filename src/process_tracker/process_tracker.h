@@ -33,6 +33,7 @@
 struct Win32_process_node {
   Win32_process_node* next;
   HANDLE process_handle;
+  
 };
 
 struct Win32_snapshot_process_list {

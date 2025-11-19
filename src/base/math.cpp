@@ -521,6 +521,17 @@ U32 range_u32_within(Range_U32 range, U32 value)
 }
 
 ///////////////////////////////////////////////////////////
+// Damian: Range_U64 stuff
+//
+Range_U64 range_u64(U64 min, U64 max)
+{
+  Range_U64 range = {};
+  range.min = min;
+  range.max = max;
+  return range;
+}
+
+///////////////////////////////////////////////////////////
 // Damian: Bounding box stuff 
 //
 Bounding_box bounding_box_make(F32 x0, F32 y0, F32 x1, F32 y1)
@@ -548,6 +559,18 @@ U8* align_up_p(U8* p, U64 alignment)
   U64 p_address_aligned = align_up(p_address, alignment);
   U8* aligned_p = (U8*)p_address_aligned;
   return aligned_p; 
+}
+
+F32 clamp_f32(F32 value, F32 min, F32 max)
+{
+  if (value < min) {
+    value = min;
+  }
+  if (value > max)
+  {
+    value = max;
+  }
+  return value;
 }
 
 ///////////////////////////////////////////////////////////

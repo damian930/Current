@@ -88,6 +88,13 @@ struct Range_U32 {
 };
 #define ForEachRangeU32(it_name, range) for (U32 it_name = range.min; it_name < range.max; it_name += 1)
 
+// Damian: Max here is ussually used as the non inclusive bound
+struct Range_U64 {
+  U64 min;
+  U64 max;
+};
+#define ForEachRangeU64(it_name, range) for (U64 it_name = range.min; it_name < range.max; it_name += 1)
+
 // Damian: Bounded box
 struct Bounding_box {
   F32 x0;
@@ -188,6 +195,7 @@ Bounding_box bounding_box_make(F32 x0, F32 y0, F32 x1, F32 y1);
 // Damian: Other mathy functions
 U64 align_up(U64 value, U64 alignment);
 U8* align_up_p(U8* p, U64 alignment);
+F32 clamp_f32(F32 value, F32 min, F32 max);
 
 // Damian: Colors
 typedef Vec4_F32 Color;

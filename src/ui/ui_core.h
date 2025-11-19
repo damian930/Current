@@ -27,6 +27,7 @@ enum UI_size_kind {
 struct UI_size {
   UI_size_kind kind;
   F32 value;
+  F32 strictness;
 };
 
 // TODO: I wanted this to be in some other spot, but i just cant make it compile
@@ -40,8 +41,8 @@ struct UI_size {
   UI_STACK_DATA( UI_text_color_stack,       text_color_stack,       UI_text_color_node,      node, Color,   value, C_WHITE,               ui_push_text_color,       ui_pop_text_color,       ui_current_text_color      ) \
   UI_STACK_DATA( UI_padding_stack,          padding_stack,          UI_padding_node,         node, F32,     value, 0.0f,                  ui_push_padding,          ui_pop_padding,          ui_current_padding         ) \
   UI_STACK_DATA( UI_padding_color_stack,    padding_color_stack,    UI_padding_color_node,   node, Color,   value, C_TRANSPARENT,         ui_push_padding_color,    ui_pop_padding_color,    ui_current_padding_color   ) \
-  UI_STACK_DATA( UI_size_x_stack,           size_x_stack,           UI_size_x_node,          node, UI_size, value, ui_size_px_make(0.0f), ui_push_size_x,           ui_pop_size_x,           ui_current_size_x          ) \
-  UI_STACK_DATA( UI_size_y_stack,           size_y_stack,           UI_size_y_node,          node, UI_size, value, ui_size_px_make(0.0f), ui_push_size_y,           ui_pop_size_y,           ui_current_size_y          ) \
+  UI_STACK_DATA( UI_size_x_stack,           size_x_stack,           UI_size_x_node,          node, UI_size, value, ui_size_px_make(0.0f, 1.0f), ui_push_size_x,           ui_pop_size_x,           ui_current_size_x          ) \
+  UI_STACK_DATA( UI_size_y_stack,           size_y_stack,           UI_size_y_node,          node, UI_size, value, ui_size_px_make(0.0f, 1.0f), ui_push_size_y,           ui_pop_size_y,           ui_current_size_y          ) \
   UI_STACK_DATA( UI_layout_axis_stack,      layout_axis_stack,      UI_layout_axis_node,     node, Axis2,   value, Axis2_y,               ui_push_layout_axis,      ui_pop_layout_axis,      ui_current_layout_axis     )                                                   
 
 // Declaring stacks 
@@ -80,6 +81,7 @@ struct UI_Inputs {
   B32 is_hovered;
   B32 is_pressed_left;
   B32 is_clicked;
+  Vec2 withing_widget_mouse_pos; 
 };
 
 struct UI_Box {
@@ -113,7 +115,6 @@ struct UI_Box {
   // F32 max_size[Axis2_COUNT];
 
   // Sizing pass data
-  B32 is_size_computed;
   F32 computed_sizes[Axis2_COUNT];
   F32 computed_parent_rel_pos[Axis2_COUNT];
   Rect computed_final_rect;
@@ -158,21 +159,17 @@ void ui_set_texture(Texture2D texture)
 }
 // ---------------------------------------------
 
-// Extra accesors
-UI_size ui_size_make(UI_size_kind kind, F32 value);
-UI_size ui_size_px_make(F32 value);
+// Sizes
+UI_size ui_size_make(UI_size_kind kind, F32 value, F32 strictness);
+UI_size ui_size_px_make(F32 value, F32 strictness);
 UI_size ui_size_child_sum_make();
-UI_size ui_size_text_make();
+UI_size ui_size_text_make(F32 strictness);
 UI_size ui_size_percent_of_parent_make(F32 p);
-UI_size ui_size_fit_the_parent_make();
-#define UI_SizePx(v)              ui_size_make(UI_size_kind_px, v)
-#define UI_SizeChildrenSum()      ui_size_make(UI_size_kind_children_sum, Null)
-#define UI_SizeText()             ui_size_make(UI_size_kind_text, Null)
-#define UI_SizePercentOfParent(p) ui_size_make(UI_size_kind_percent_of_parent, p)
-#define UI_SizeFitTheParent()     ui_size_make(UI_size_kind_fit_the_parent, Null)
-Arena* ui_current_build_arena();
-Arena* ui_prev_build_arena();
+UI_size ui_size_fit_the_parent_make(F32 grow_value);
 
+// Damian: Key format is dear imgui like
+// Str8 ui_key_from_str8(Str8 str);
+// Str8 ui_key_from_cstr(const char* cstr);
 
 // State
 void ui_state_init(Win32_window* window, Font_info* font_info);
@@ -214,7 +211,7 @@ void ui_draw_child_gap_color(Color gap_color);
 
 UI_Inputs ui_box_make(Str8 key, UI_box_flags flags, Str8 text);
 
-// Stacks
+// Stack functions
 #define UI_STACK_DATA(stack_struct_name, stack_var_name,                    \
                       node_struct_name,  node_var_name,                     \
                       Value_type, value_var_name, default_value,            \
@@ -224,6 +221,33 @@ void pop_func_name();                        \
 Value_type get_current_func_name();        
   UI_STACK_DATA_TABLE
 #undef UI_STACK_DATA
+
+// Stack macros
+// IDEA: Might not want to allow all of this to be stack passed to children, but since i am exploring all of this -> its fine
+#define UI_BackgroundColor(color) DefereLoop(ui_push_background_color(color),   ui_pop_background_color() )
+#define UI_ChildGap(gap)          DefereLoop(ui_push_child_gap       (gap),     ui_pop_child_gap       () )
+#define UI_ChildGapColor(color)   DefereLoop(ui_push_child_gap_color (color),   ui_pop_child_gap_color () )
+#define UI_TextColor(color)       DefereLoop(ui_push_text_color      (color),   ui_pop_text_color      () )
+#define UI_Padding(padding)       DefereLoop(ui_push_padding         (padding), ui_pop_padding         () )
+#define UI_PaddingColor(color)    DefereLoop(ui_push_padding_color   (color),   ui_pop_padding_color   () )
+#define UI_SizeX(size)            DefereLoop(ui_push_size_x          (size),    ui_pop_size_x          () )
+#define UI_SizeY(size)            DefereLoop(ui_push_size_y          (size),    ui_pop_size_y          () )
+#define UI_LayoutAxis(axis)       DefereLoop(ui_push_layout_axis     (axis),    ui_pop_layout_axis     () )
+
+// Setters 
+// IDEA: If this works out, then add these as a part of the X list func generation for ui stuff
+void ui_set_background_color(Color color);
+void ui_set_child_gap(F32 value);
+void ui_set_child_gap_color(Color color);
+void ui_set_text_color(Color color);
+void ui_set_padding(F32 value);
+void ui_set_padding_color(Color color);
+void ui_set_size_x(UI_size size);
+void ui_set_size_y(UI_size size);
+void ui_set_layout_axis(Axis2 axis);
+
+// Some private like things that i just migth want to use, will see
+UI_Box* ui_get_current_element();
 
 ///////////////////////////////////////////////////////////
 // Damian: TODO stuff

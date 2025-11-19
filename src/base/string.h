@@ -3,6 +3,7 @@
 
 #include <stdarg.h>
 #include "core.h"
+#include "math.h"
 
 struct Arena;
 // #include "arena.h"
@@ -13,11 +14,12 @@ struct Str8 {
 };
 typedef Str8 Data_buffer;
 
-enum Str8_match_flags : U32 {
+enum Str8_match_flag : U32 {
   Str8_match_flag_NONE            = (1 << 0),
   Str8_match_flag_ignore_case     = (1 << 1),
   Str8_match_flag_normalise_slash = (1 << 2),
 };
+typedef U32 Str8_match_flags; 
 
 struct Str8_node {
   Str8_node* next;
@@ -40,6 +42,8 @@ U64 cstr_len(const char* name);
 
 // Damian: These null terminate until the next allocation on the same arena (See impl)
 Str8 str8_empty();
+
+// TODO: Remove this todo from here after testing if these are usefull
 Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len);
 Str8 str8_from_cstr(Arena* arena, const char* cstr);
 Str8 str8_from_str8(Arena* arena, Str8 str8);
@@ -81,11 +85,14 @@ U8 normalise_slash(U8 ch);
 void str8_list_push_str(Arena* arena, Str8_list* list, Str8 str);
 Str8 str8_from_list(Arena* arena, Str8_list* list);
 
-B32 str8_match(Str8 str, Str8 other, U32 flags);
-B32 str8_match_cstr(Str8 str, const char* c_str, U32 flags);
+B32 str8_match(Str8 str, Str8 other, Str8_match_flags flags);
+B32 str8_match_cstr(Str8 str, const char* c_str, Str8_match_flags flags);
 
-Str8 str8_substring(Str8 str, U64 start_index, U64 end_index);
-Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, U32 flags);
+// IDEA: Might also be nice to add a way to incude the end just cause why not if we are working with indexes
+Str8 str8_substring_range(Str8 str, Range_U64 range);                  
+Str8 str8_sunbstring_index(Str8 str, U64 start_indexst, U64 index_1_after_last);
+
+Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, Str8_match_flags match_flags);
 
 Str8 get_file_basename(Str8 path);
 Str8 get_file_name(Str8 path);

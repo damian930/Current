@@ -649,6 +649,7 @@ void DEV_draw_rect_list(DEBUG_draw_rect_node* node)
     glUniform1i(glGetUniformLocation(rect_program_id, "program_sub_type"), 3);
     glUniform1i(glGetUniformLocation(rect_program_id, "is_texture1"), GL_TRUE); 
     glUniform1i(glGetUniformLocation(rect_program_id, "texture1"), 0);
+    glUniform4f(glGetUniformLocation(rect_program_id, "color"), color.r, color.g, color.b, color.a);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture.gl_id);
   }
