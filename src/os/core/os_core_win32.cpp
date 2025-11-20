@@ -149,8 +149,8 @@ OS_Win32_file os_win32_file_open(Str8 file_path, U32 access_flags)
   if (access_flags & File_access_flag_append) { creation_parameters = OPEN_ALWAYS; }  // Doesnt truncate
 
   // Str8 file_path_null_term = str8_from_str8_temp_null_term(scratch.arena, file_path);
-  Str8 file_path_null_term = str8_temp_from_str8(file_path);
-
+  Scratch scratch = get_scratch();
+  Str8 file_path_null_term = str8_from_str8_alloc(scratch.arena, file_path);
   HANDLE file_handle = CreateFileA((CHAR *)file_path_null_term.data, 
                                    desired_access, 
                                    share_mode,
@@ -158,9 +158,9 @@ OS_Win32_file os_win32_file_open(Str8 file_path, U32 access_flags)
                                    creation_parameters,
                                    FILE_ATTRIBUTE_NORMAL,
                                    NULL);
-
   OS_Win32_file file = {};
   file.handle = file_handle; 
+  end_scratch(&scratch);
 
   return file;
 }
@@ -226,18 +226,25 @@ void os_win32_file_write(OS_Win32_file file, Data_buffer buffer)
 
 void os_win32_file_delete(Str8 file_name)
 {
-  // Str8 file_name_nt = str8_from_str8_temp_null_term(scratch.arena, file_name);
-  Str8 file_name_nt = str8_temp_from_str8(file_name);
-  DeleteFileA((const CHAR*)file_name_nt.data);
+  Scratch scratch = get_scratch();
+  {
+    Str8 file_name_nt = str8_from_str8_alloc(scratch.arena, file_name);
+    DeleteFileA((const CHAR*)file_name_nt.data);
+  }  
+  end_scratch(&scratch);
 }
 
 B32 os_win32_file_does_exist(Str8 file_name)
 {
   // TODO: All these A path and names have to be converted to UTF-16 and used for W variants of win32 functions
   B32 does_exist = false;
-  Str8 name_nt = str8_temp_from_str8(file_name);
-  U32 attrs = GetFileAttributesA((const CHAR*)name_nt.data);
-  does_exist = ((attrs != INVALID_FILE_ATTRIBUTES) && !(attrs & FILE_ATTRIBUTE_DIRECTORY));
+  Scratch scratch = get_scratch();
+  {
+    Str8 name_nt = str8_from_str8_alloc(scratch.arena, file_name);
+    U32 attrs = GetFileAttributesA((const CHAR*)name_nt.data);
+    does_exist = ((attrs != INVALID_FILE_ATTRIBUTES) && !(attrs & FILE_ATTRIBUTE_DIRECTORY));
+  }
+  end_scratch(&scratch);
   return does_exist;
 }
 

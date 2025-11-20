@@ -6,79 +6,48 @@
 #include "math.cpp"
 
 ///////////////////////////////////////////////////////////
-// Damian: Data_buffer stuff
+// Damian: Constructors 
 //
-Data_buffer data_buffer_make(Arena* arena, U64 size)
-{
-  Data_buffer buffer = {};
-  buffer.count = size;
-  buffer.data = ArenaPushArr(arena, U8, size);
-  return buffer;
-}
-
-///////////////////////////////////////////////////////////
-// Damian: Extra cstr helpers
-//
-U64 cstr_len(const char* name)
-{
-  U64 len = 0;
-  while (name[len] != '\0') {
-    len += 1;
-  }
-  return len;
-}
-
-///////////////////////////////////////////////////////////
-// Damian: String stuff
-//
-// Damian: This is here insted of regular {}, since i usually use {} to represent the non yet given value. 
-//         If i want in code to specify that i specifically want the value to be, 
-//         and it to be zero, then i want it to be reflected in the code.
 Str8 str8_empty() 
 {
   Str8 str = {};
+  str.count = 0;
+  str.data  = Null;
   return str;
 }
 
-Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len)
+Str8 str8_from_cstr_len(const char* cstr, U64 len)
 {
   Str8 str = {};
-  str.data  = ArenaPushArr(arena, U8, len);
+  str.data = (U8*)cstr;
   str.count = len;
-  MemCopy(str.data, cstr, str.count);
+  return str;
+}
+
+Str8 str8_from_cstr(const char* cstr)
+{
+  U64 len = 0;
+  while (cstr[len] != '\0') {
+    len += 1;
+  }
+  Str8 str = str8_from_cstr_len(cstr, len);
+  return str;
+}
+
+Str8 str8_from_str8_alloc(Arena* arena, Str8 other_str8)
+{
+  // Create a buffer, copy the data, bull terminate, pop
+  Str8 str = {};
+  str.data = ArenaPushArr(arena, U8, other_str8.count);
+  str.count = other_str8.count;
+  MemCopy(str.data, other_str8.data, str.count);
   U8* nt = ArenaPush(arena, U8);
   *nt = '\0';
   arena_pop(arena, 1);
   return str;
 }
 
-Str8 str8_from_cstr(Arena* arena, const char* cstr)
-{
-  Str8 str = str8_from_cstr_len(arena, cstr, cstr_len(cstr));
-  return str;
-} 
-
-Str8 str8_from_str8(Arena* arena, Str8 str8)
-{
-  Str8 result = str8_from_cstr_len(arena, (char*)str8.data, str8.count);
-  return result; 
-}
-
-Str8 str8_temp_from_cstr(const char* cstr)
-{
-  Scratch scratch = get_scratch();
-  Str8 str = str8_from_cstr(scratch.arena, cstr);
-  end_scratch(&scratch);
-  return str;
-}
-
-Str8 str8_temp_from_str8(Str8 other)
-{
-  Scratch scratch = get_scratch();
-  Str8 str = str8_from_str8(scratch.arena, other);
-  end_scratch(&scratch);
-  return str;
-}
+// ---------- TODO: This is to be marked when its done
 
 U8 char_to_lower(U8 ch)
 {
@@ -169,7 +138,7 @@ B32 str8_match_cstr(Str8 str, const char* c_str, Str8_match_flags flags)
   B32 result = false;
   Scratch scratch = get_scratch();
   {
-    Str8 other_str = str8_from_cstr(scratch.arena, c_str);
+    Str8 other_str = str8_from_cstr(c_str);
     result = str8_match(str, other_str, flags);
   } 
   end_scratch(&scratch);
@@ -193,7 +162,7 @@ Str8 str8_substring_range(Str8 str, Range_U64 range)
   return result;
 }
 
-Str8 str8_sunbstring_index(Str8 str, U64 start_index, U64 index_1_after_last)
+Str8 str8_substring_index(Str8 str, U64 start_index, U64 index_1_after_last)
 {
   Str8 sub_str = str8_substring_range(str, range_u64(start_index, index_1_after_last));
   return sub_str;
@@ -236,7 +205,7 @@ Str8_list str8_split_by_cstr(Arena* arena, Str8 str, const char* sep, Str8_match
   Str8_list list = {};
   Scratch scratch = get_scratch();
   {
-    list = str8_split_by_str8(arena, str, str8_from_cstr(scratch.arena, sep), flags);
+    list = str8_split_by_str8(arena, str, str8_from_cstr(sep), flags);
   }
   end_scratch(&scratch);
   return list;
@@ -250,7 +219,7 @@ Str8 get_file_basename(Str8 path)
   {
     Str8_list split_list = str8_split_by_str8(scratch.arena, 
                                               path, 
-                                              Str8FromClit(scratch.arena, "/"), 
+                                              Str8FromClit("/"), 
                                               Str8_match_flag_normalise_slash);
     if (split_list.node_count > 0)
     {
@@ -269,7 +238,7 @@ Str8 get_file_name(Str8 path)
   {
     Str8_list split_list = str8_split_by_str8(scratch.arena, 
                                               basename, 
-                                              Str8FromClit(scratch.arena, "."), 
+                                              Str8FromClit("."), 
                                               Str8_match_flag_NONE);
     if (split_list.node_count > 0) 
     {
@@ -288,7 +257,7 @@ Str8 result = {};
   {
     Str8_list split_list = str8_split_by_str8(scratch.arena, 
                                               basename, 
-                                              Str8FromClit(scratch.arena, "."), 
+                                              Str8FromClit("."), 
                                               Str8_match_flag_NONE);
     if (split_list.node_count > 0) 
     {
@@ -299,9 +268,25 @@ Str8 result = {};
   return result;
 }
 
+///////////////////////////////////////////////////////////
+// Damian: Some extra stuff
+//
+U64 get_cstr_len(const char* name)
+{
+  U64 len = 0;
+  while (name[len] != '\0') {
+    len += 1;
+  }
+  return len;
+}
 
-
-
+Data_buffer data_buffer_make(Arena* arena, U64 size)
+{
+  Data_buffer buffer = {};
+  buffer.count = size;
+  buffer.data = ArenaPushArr(arena, U8, size);
+  return buffer;
+}
 
 
 

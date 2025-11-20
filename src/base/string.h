@@ -34,50 +34,17 @@ struct Str8_list {
   U64 char_count;
 };
 
-// Damian: Data_buffer stuff
-Data_buffer data_buffer_make(Arena* arena, U64 size);
-
-// Damian: Extra cstr helpers
-U64 cstr_len(const char* name);
-
-// Damian: These null terminate until the next allocation on the same arena (See impl)
+// Damian: Constructors
 Str8 str8_empty();
+Str8 str8_from_cstr_len(const char* cstr, U64 len);
+Str8 str8_from_cstr(const char* cstr);
+Str8 str8_from_str8_alloc(Arena* arena, Str8 str8);
+#define Str8FromClit(clit) str8_from_cstr_len(clit, ArrayCount(clit) - 1)
+// NOTE: str8_from_str8_alloc procduces an array that is null terminated until the next allocation on the same arena
 
-// TODO: Remove this todo from here after testing if these are usefull
-Str8 str8_from_cstr_len(Arena* arena, const char* cstr, U64 len);
-Str8 str8_from_cstr(Arena* arena, const char* cstr);
-Str8 str8_from_str8(Arena* arena, Str8 str8);
+// TODO: Some like this: printf(str8_from_str8_f(arena, "%U32 %Str %csrt"), (U32)x, (Str8)str, "cstr")
 
-// Some like this: printf(str8_from_str8_f(arena, "%U32 %Str %csrt"), (U32)x, (Str8)str, "cstr")
-#if 0
-Str8 str8_from_str8_f(Arena* arena, const char* fmt, ...)
-{
-  va_list args = {};
-  DefereLoop(va_start(args, fmt), va_end(args))
-  {
-    U64 fmt_len = cstr_len(fmt);
-    for (U64 i = 0; i < fmt_len; i += 1)
-    {
-      NotImplemented();
-      // TODO: Create a syntax for the fmt, then lex it, parse it, create a string from it
-    }
-
-    // va_arg(args, Type_to_access)
-  }
-
-  // Iterate over the passed in string
-  // va_arg(args, Type);
-}
-#endif
-
-#define Str8FromClit(arena_p, clit) str8_from_cstr_len(arena_p, clit, ArrayCount(clit) - 1)
-
-// Damian: Fast pass str maker, string is valid until the next time scratch is used.
-//         These are mosly for debug uses where str8 are kind require more code than i would like.
-//         Usage of these is to be minimized to local controlled situations or for debugging.
-Str8 str8_temp_from_cstr(const char* cstr);
-Str8 str8_temp_from_str8(Str8 other);
-
+// TODO: Mark these here
 U8 char_to_lower(U8 ch);
 U8 char_to_upper(U8 ch);
 U8 normalise_slash(U8 ch);
@@ -88,15 +55,18 @@ Str8 str8_from_list(Arena* arena, Str8_list* list);
 B32 str8_match(Str8 str, Str8 other, Str8_match_flags flags);
 B32 str8_match_cstr(Str8 str, const char* c_str, Str8_match_flags flags);
 
-// IDEA: Might also be nice to add a way to incude the end just cause why not if we are working with indexes
 Str8 str8_substring_range(Str8 str, Range_U64 range);                  
-Str8 str8_sunbstring_index(Str8 str, U64 start_indexst, U64 index_1_after_last);
+Str8 str8_substring_index(Str8 str, U64 start_indexst, U64 index_1_after_last);
 
 Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, Str8_match_flags match_flags);
 
 Str8 get_file_basename(Str8 path);
 Str8 get_file_name(Str8 path);
 Str8 get_file_extension(Str8 path);
+
+// Damian: Some extra stuff
+Data_buffer data_buffer_make(Arena* arena, U64 size);
+U64 get_cstr_len(const char* name);
 
 #endif
 

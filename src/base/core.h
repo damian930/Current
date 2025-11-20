@@ -33,7 +33,7 @@ typedef S64 B64;
 #define local         static
 #define file_private  static
 
-#define Null NULL
+#define Null (0)
 
 #define _Concat(a, b) a##b 
 #define Concat(a, b) _Concat(a, b)
