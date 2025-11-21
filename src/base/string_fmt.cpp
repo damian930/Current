@@ -228,16 +228,47 @@ Str8_fmt_scope_list* str8_fmt_create_specifier_list(Arena* arena, const char* fm
 
       if (specifier_found)
       {
-        if (   str8_fmt_lexer_peek_token_from_current(&lexer, 0).kind == Str8_fmt_token_kind__align_right_flag
-            && str8_fmt_lexer_peek_token_from_current(&lexer, 1).kind == Str8_fmt_token_kind__integer_value
-        ) {
-          str8_fmt_lexer_eat_next_token(&lexer);
-          Str8_fmt_token align_value_token = str8_fmt_lexer_eat_next_token(&lexer);
-          U64 align_value = u64_from_str8(align_value_token.str);
+        // :<*10
+        // :<10
+        // We are supposed to get the U32, then check for :<. Then there are 3 cases. 
+        // We either have integer after the :<, then we align. 
+        // We might have char and then integer, then we also align
+        // We might just have char after the :<, then its invalid and we just make this regular text 
 
-          new_scope->flag = Str8_fmt_scope_flag__align_left;
-          new_scope->value_for_the_flag = (F32)align_value;
+        if (str8_fmt_lexer_match_next_token(&lexer, Str8_fmt_token_kind__align_right_flag))
+        {
+          if (str8_fmt_lexer_match_next_token(&lexer, Str8_fmt_token_kind__integer_value))
+          {
+            // Here we create alignment with default separator
+            str8_fmt_lexer_eat_next_token(&lexer);
+            Str8_fmt_token align_value_token = str8_fmt_lexer_eat_next_token(&lexer);
+            U64 align_value = u64_from_str8(align_value_token.str);
+
+            new_scope->flag = Str8_fmt_scope_flag__align_left;
+            new_scope->value_for_the_flag = (F32)align_value;
+            new_scope->separator = ' ';
+          }
+          else if (
+               str8_fmt_lexer_peek_token_from_current(&lexer, 0).kind == Str8_fmt_token_kind__Other_char
+            && str8_fmt_lexer_peek_token_from_current(&lexer, 1).kind == Str8_fmt_token_kind__integer_value
+          ) {
+            // Here we create alignment with the specified char for separator
+            Str8_fmt_token align_char = str8_fmt_lexer_eat_next_token(&lexer);
+            Str8_fmt_token align_value_token = str8_fmt_lexer_eat_next_token(&lexer);
+            U64 align_value = u64_from_str8(align_value_token.str);
+            U8 separator = align_char.str.data[0];
+
+            new_scope->flag = Str8_fmt_scope_flag__align_left;
+            new_scope->value_for_the_flag = (F32)align_value;
+            new_scope->separator = separator;
+          }
+          else // Invalide case, the :< becomes regular text
+          {
+            new_scope->specifier = Str8_fmt_scope_specifier__regular_text;
+            new_scope->str = Str8FromClit(":<");
+          }
         }
+
       }
 
     }
@@ -288,6 +319,7 @@ Str8 str8_fmt_format(Arena* arena, const char* fmt, va_list args)
 
       if (scope->flag == Str8_fmt_scope_flag__align_left)
       {
+        U8 separator = scope->separator;
         U64 align_value = (U64)scope->value_for_the_flag;
         U64 chars_needed_to_align = 0;
         if (align_value > formated.count)
@@ -297,7 +329,7 @@ Str8 str8_fmt_format(Arena* arena, const char* fmt, va_list args)
         Str8 align_str = data_buffer_make(scratch.arena, chars_needed_to_align);
         ForEachEx(i, align_str.count, align_str.data)
         {
-          align_str.data[i] = ' '; // Sep
+          align_str.data[i] = separator;
         }
         str8_list_push_str(scratch.arena, final_str_list, formated);
         str8_list_push_str(scratch.arena, final_str_list, align_str);

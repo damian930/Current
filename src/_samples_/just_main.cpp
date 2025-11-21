@@ -53,10 +53,23 @@ void EntryPoint()
 
   for (U32 i = 10; i < 10000000; i *= 10)
   {
-    str8_printf("I --> #U32:<10 <-- \n", i);
+    str8_printf("I --> #U32:<*10 <-- \n", i);
   }
 
+  // for (U32 i = 10; i < 10000000; i *= 10)
+  // {
+  //   str8_printf("I --> #U32:<10 <-- \n", i);
+  // }
 
+  // for (U32 i = 10; i < 10000000; i *= 10)
+  // {
+  //   str8_printf("I --> #U32:<0 <-- \n", i);
+  // }
+
+  // for (U32 i = 10; i < 10000000; i *= 10)
+  // {
+  //   str8_printf("I --> #U32:<3 <-- \n", i);
+  // }
 
   // TODO:
   // {value:>10} - right align in width 10

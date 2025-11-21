@@ -79,6 +79,7 @@ struct Str8_fmt_scope {
 
   Str8_fmt_scope_flag flag;
   F32 value_for_the_flag;
+  U8 separator;
 };
 
 struct Str8_fmt_scope_list {
