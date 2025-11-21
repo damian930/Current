@@ -5,6 +5,7 @@
 
 enum Str8_fmt_token_kind {
   Str8_fmt_token_kind__regular_text,
+  Str8_fmt_token_kind__integer_value,
 
   Str8_fmt_token_kind__fmt_scope_starter,
 
@@ -27,6 +28,8 @@ enum Str8_fmt_token_kind {
   Str8_fmt_token_kind__Str8,
   Str8_fmt_token_kind__Pointer_star,
 
+  Str8_fmt_token_kind__align_right_flag,
+
   Str8_fmt_token_kind__END,
 };
 
@@ -43,7 +46,7 @@ struct Str8_fmt_lexer {
 };
 
 enum Str8_fmt_scope_specifier {
-  Str8_fmt_scope_specifier__NONE,
+  Str8_fmt_scope_specifier__regular_text,
   Str8_fmt_scope_specifier__U8,
   Str8_fmt_scope_specifier__U16,
   Str8_fmt_scope_specifier__U32,
@@ -60,12 +63,20 @@ enum Str8_fmt_scope_specifier {
   Str8_fmt_scope_specifier__P,
 };
 
+enum Str8_fmt_scope_flag {
+  Str8_fmt_scope_flag__NONE,
+  Str8_fmt_scope_flag__align_left,
+};
+
 struct Str8_fmt_scope {
   Str8_fmt_scope* next;
   Str8_fmt_scope* prev;
 
-  Str8 str;
   Str8_fmt_scope_specifier specifier;
+  Str8 str;
+
+  Str8_fmt_scope_flag flag;
+  F32 value_for_the_flag;
 };
 
 struct Str8_fmt_scope_list {
@@ -100,6 +111,11 @@ Str8 str8_from_u64_hex(Arena* arena, U64 u64);
 Str8 str8_from_p(Arena* arena, void* p);
 Str8 str8_from_str8_f(Arena* arena, const char* fmt, ...);
 
+U64 u64_from_str8(Str8 str)
+{
+  // TODO:
+  return 3;
+}
 
 
 

@@ -86,6 +86,12 @@ U8 normalise_slash(U8 ch)
   return result;
 }
 
+B32 is_char_a_number(U8 ch)
+{
+  B32 is_number = ('0' <= ch && ch <= '9');
+  return is_number;
+}
+
 void str8_list_push_str(Arena* arena, Str8_list* list, Str8 str)
 {
   Str8_node* node = ArenaPush(arena, Str8_node);

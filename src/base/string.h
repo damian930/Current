@@ -49,6 +49,7 @@ Str8 str8_from_fmt_alloc(Arena* arena, const char* fmt, ...);
 U8 char_to_lower(U8 ch);
 U8 char_to_upper(U8 ch);
 U8 normalise_slash(U8 ch);
+B32 is_char_a_number(U8 ch);
 
 void str8_list_push_str(Arena* arena, Str8_list* list, Str8 str);
 Str8 str8_from_list(Arena* arena, Str8_list* list);
