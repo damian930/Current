@@ -17,6 +17,53 @@
    - Create a new string
    - Return
 */
+
+// Go over the string until {, thene find the if there is the closing }. If there is then come back and store the formating into like a node
+// Then we will have a list of things that are just regular strings and othe that are to be formated, then we go over the list and formate the things that are to be formated
+// Then we jus join the list and we get the thing we needed
+
+/* Str8_fmt grammar
+  grammar           :: (normal_text | fmt)+
+  fmt               :: "{" fmt_specifiers "}"
+  fmt_specifiers    :: [U8, U16, U32, U64, S8, S16, S32, S64, F32, F64, *P, Cstr, Str8] 
+*/
+
+// struct Str8_fmt_node {
+//   Str8_fmt_node* next;
+//   Str8_fmt_node* prev;
+//   Str8 str;
+// };
+
+// void str8_fmt(const char* fmt)
+// {
+//   U64 fmt_size = get_cstr_len(fmt);
+//   ForEachEx(i, fmt_size, fmt)
+//   {
+//     U8 ch = fmt[i];
+//     if (ch == '{')
+//     {
+//       B32 is_fmt_closing = false;
+//       U64 fmt_closing_index = 0; 
+//       for (U64 j = i; j < fmt_size; j += 1)
+//       {
+//         if (fmt[j] == '}') 
+//         {
+//           fmt_closing_index = j;
+//           break;
+//         }
+//       }
+//       // Create a node here for the fmt substring for later processing
+//     }
+//     else
+//     {
+
+//     }
+//   }
+
+
+// }
+
+#if 1
 enum Str8_fmt_token_kind {
   Str8_fmt_token_kind__regular_text,
 
@@ -36,9 +83,11 @@ enum Str8_fmt_token_kind {
   Str8_fmt_token_kind__F32,
   Str8_fmt_token_kind__F64,
 
-  Str8_fmt_token_kind__Pointer_star,
+  // Str8_fmt_token_kind__Pointer_star,
   Str8_fmt_token_kind__Cstr,
   Str8_fmt_token_kind__Str8,
+
+  Str8_fmt_token_kind__END,
 };
 
 const char* token_kind_to_cstr(Str8_fmt_token_kind kind)
@@ -59,9 +108,10 @@ const char* token_kind_to_cstr(Str8_fmt_token_kind kind)
     case Str8_fmt_token_kind__S64: { cstr = "Str8_fmt_token_kind__S64"; } break;
     case Str8_fmt_token_kind__F32: { cstr = "Str8_fmt_token_kind__F32"; } break;
     case Str8_fmt_token_kind__F64: { cstr = "Str8_fmt_token_kind__F64"; } break;
-    case Str8_fmt_token_kind__Pointer_star: { cstr = "Str8_fmt_token_kind__Pointer_star"; } break;
+    // case Str8_fmt_token_kind__Pointer_star: { cstr = "Str8_fmt_token_kind__Pointer_star"; } break;
     case Str8_fmt_token_kind__Cstr: { cstr = "Str8_fmt_token_kind__Cstr"; } break;
     case Str8_fmt_token_kind__Str8: { cstr = "Str8_fmt_token_kind__Str8"; } break;
+    case Str8_fmt_token_kind__END: { cstr = "Str8_fmt_token_kind__END"; } break;
   }
   return cstr;
 }
@@ -75,6 +125,7 @@ struct Str8_fmt_lexer {
   Str8 input_str;
   U32 current_index;
   U32 token_start_index;
+  B32 searching_for_closing_brace;
 };
 
 U8 str8_fmt_lexer_eat_char(Str8_fmt_lexer* fmt_lexer)
@@ -108,7 +159,7 @@ U64 str8_fmt_lexer_char_left_to_eat(Str8_fmt_lexer* fmt_lexer)
   U64 chars_left = 0;
   if (!str8_fmt_lexer_is_done(fmt_lexer))
   {
-    chars_left = fmt_lexer->input_str.count - fmt_lexer->current_index + 1;
+    chars_left = fmt_lexer->input_str.count - fmt_lexer->current_index;
   }
   return chars_left;
 }
@@ -128,6 +179,9 @@ B32 str8_fmt_lexer_match_cstr(Str8_fmt_lexer* fmt_lexer, const char* cstr)
       }
     }
   }
+  else {
+    match = false;
+  }
   if (match)
   {
     ForEachEx(i, cstr_len, cstr)
@@ -137,12 +191,6 @@ B32 str8_fmt_lexer_match_cstr(Str8_fmt_lexer* fmt_lexer, const char* cstr)
   }
   return match;
 }
-
-// B32 str8_fmt_lexer_match_char(Str8_fmt_lexer* fmt_lexer, U8 ch)
-// {
-//   B32 match = (str8_fmt_lexer_peek_char(fmt_lexer) == ch);
-//   return match;
-// }
 
 Str8_fmt_token str8_fmt_lexer_create_token(Str8_fmt_lexer* fmt_lexer, Str8_fmt_token_kind kind)
 {
@@ -179,53 +227,82 @@ Str8_fmt_token str8_fmt_lexer_eat_next_token(Str8_fmt_lexer* fmt_lexer)
 {
   Str8_fmt_token token = {};
   Assert(!str8_fmt_lexer_is_done(fmt_lexer));
-  if (!str8_fmt_lexer_is_done(fmt_lexer))
+  if (str8_fmt_lexer_is_done(fmt_lexer))
+  {
+    token.kind = Str8_fmt_token_kind__END;
+  }
+  else
   {
     fmt_lexer->token_start_index = fmt_lexer->current_index;
     U8 test_char = str8_fmt_lexer_peek_char(fmt_lexer);
-  
-    switch (test_char)
-    {
-      default: 
-      { 
-        if      (str8_fmt_lexer_match_cstr(fmt_lexer, "U8"))  { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__U8);  }
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "U16")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__U16); }
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "U32")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__U32); }
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "U64")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__U64); }
-        
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "S8"))  { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__S8);  }
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "S16")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__S16); }
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "S32")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__S32); }
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "S64")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__S64); }
-        
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "F32")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__F32); }
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "F64")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__F64); }
-        
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "Cstr")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__Cstr); }
-        else if (str8_fmt_lexer_match_cstr(fmt_lexer, "Str8")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__Str8); }
-        
-        else { token = str8_fmt_lexer_do_regular_text_token(fmt_lexer); }
-      } break;
-  
-      case '{':
-      {
-        str8_fmt_lexer_eat_char(fmt_lexer);
-        token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__opening_curly_brace);
-      } break;
 
-      case '}':
-      {
-        str8_fmt_lexer_eat_char(fmt_lexer);
-        token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__closing_curly_brace);
-      } break;
+    // Just eat tokens until we have found the a new keyword, while we havent then now its just the regular text part 
 
-      case '*':
+    if      (str8_fmt_lexer_match_cstr(fmt_lexer, "U8"))  { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__U8);  }
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "U16")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__U16); }
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "U32")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__U32); }
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "U64")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__U64); }
+    
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "S8"))  { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__S8);  }
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "S16")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__S16); }
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "S32")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__S32); }
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "S64")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__S64); }
+    
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "F32")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__F32); }
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "F64")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__F64); }
+    
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "Cstr")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__Cstr); }
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "Str8")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__Str8); }
+    
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "{")) { token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__opening_curly_brace); }
+    else if (str8_fmt_lexer_match_cstr(fmt_lexer, "}")) { 
+      token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__closing_curly_brace); }
+
+    else { 
+      if (!fmt_lexer->searching_for_closing_brace)
       {
         str8_fmt_lexer_eat_char(fmt_lexer);
-        token = str8_fmt_lexer_create_token(fmt_lexer, Str8_fmt_token_kind__Pointer_star);
+
+        fmt_lexer->searching_for_closing_brace = true;
+        U32 lexer_state_current_index = fmt_lexer->current_index;
+        U32 lexer_state_token_start_index = fmt_lexer->token_start_index;
+        
+        B32 next_non_reg_text_token_present = false;
+        Str8_fmt_token next_non_reg_text_token = {};
+        while (!str8_fmt_lexer_is_done(fmt_lexer))
+        {
+          Str8_fmt_token test_token = str8_fmt_lexer_eat_next_token(fmt_lexer);
+          if (test_token.kind != Str8_fmt_token_kind__regular_text)
+          {
+            next_non_reg_text_token_present = true;
+            next_non_reg_text_token = test_token;
+            break;
+          }
+        } 
+        if (next_non_reg_text_token_present)
+        {
+          // Creating a big text token 
+          U64 reg_text_token_end = fmt_lexer->current_index - next_non_reg_text_token.str.count;
+          token.kind = Str8_fmt_token_kind__regular_text;
+          token.str = str8_substring_index(fmt_lexer->input_str, lexer_state_token_start_index, reg_text_token_end);
+
+          // Manually setting the lexer 1 token behend, so we can also return it next call
+          fmt_lexer->current_index -= next_non_reg_text_token.str.count;
+        }
+        else
+        {
+          // We are at the end of the lexer and we only got regular text
+          token.kind = Str8_fmt_token_kind__regular_text;
+          token.str = str8_substring_index(fmt_lexer->input_str, lexer_state_token_start_index, fmt_lexer->current_index);
+        }
+        fmt_lexer->searching_for_closing_brace = false;
       }
-     
+      else {
+        str8_fmt_lexer_eat_char(fmt_lexer);
+        token.kind = Str8_fmt_token_kind__regular_text;
+      }
     }
+
   }
   return token;
 }
@@ -241,76 +318,109 @@ Str8_fmt_token str8_fmt_lexer_peek_next_token(Str8_fmt_lexer* fmt_lexer)
   return token;
 }
 
-// ------
-
-enum Str8_fmt_ast_node_kind {
-  Str8_fmt_ast_node_kind__
-};
-
-struct Str8_fmt_list_node {
-  Str8_fmt_list_node* next;
-  Str8_fmt_list_node* prev;
-  Str8_fmt_token token;
-};
-
-struct Str8_fmt_list {
-  Str8_fmt_list_node* first;
-  Str8_fmt_list_node* last;
-  U32 count;
-};
-
-void str8_fmt_parse_fmt_scope(Str8_fmt_lexer* fmt_lexer)
+B32 str8_fmt_lexer_match_next_token(Str8_fmt_lexer* lexer, Str8_fmt_token_kind token_kind)
 {
-  Str8_fmt_token token = str8_fmt_lexer_eat_next_token(fmt_lexer);
-  Assert(token.kind == Str8_fmt_token_kind__opening_curly_brace);
-  if (token.kind == Str8_fmt_token_kind__opening_curly_brace)
+  B32 match = false;
+  if (str8_fmt_lexer_peek_next_token(lexer).kind == token_kind)
   {
-    while ((token = str8_fmt_lexer_eat_next_token(fmt_lexer)),
-           (token.kind != Str8_fmt_token_kind__closing_curly_brace 
-           && !str8_fmt_lexer_is_done(fmt_lexer))
-    ) {
-      printf("Token kind: %s \n", token_kind_to_cstr(token.kind));
-      
-    }
-
+    str8_fmt_lexer_eat_next_token(lexer);
+    match = true;
   }
-
-  // TODO: Eat the { here
-
-  // Create a node for the tree, go over the tokens until the }, 
-  // when done, if there is only 1 token between then and its a tokene than can be formated, 
-  // then create a node for that with the type, else just make the new node be texture node
-  // and fill with string data from the tokens    
+  return match;
 }
 
-void str8_fmt_parse(const char* fmt)
+
+// TEST
+void str8_fmt_lex(const char* fmt)
 {
   Str8_fmt_lexer lexer = {};
   lexer.input_str = str8_from_cstr(fmt);
-
-  // TODO: Think if i want the lexing next token api to return a token that represents that i am an the end of the lexer
-  //       or if i want to manually if the lexer for being consumed at the caller site
-
   while (!str8_fmt_lexer_is_done(&lexer))
   {
     Str8_fmt_token token = str8_fmt_lexer_eat_next_token(&lexer);
-    if (token.kind == Str8_fmt_token_kind__opening_curly_brace)
-    {
-      Str8_fmt_token format_specifier = str8_fmt_lexer_peek_next_token(&lexer);
-      if (format_specifier.kind == )
-      
-    }
-
+    printf("Token: %s \n", token_kind_to_cstr(token.kind));
   }
 
+  // END
+  Str8_fmt_token token = str8_fmt_lexer_eat_next_token(&lexer);
+  printf("Token: %s \n", token_kind_to_cstr(token.kind));
 }
 
 
-void str8_from_str8_f(Arena* arena, const char* fmt, ...)
+// ------
+
+/* FMT Grammar
+  Input        :: " (<fmt_scope>|<regular_text>)* "
+  fmt_scope    :: {  U|S|B  }
+  regular_text :: alpha_numeric 
+  U            :: U8|U16|U32|U64
+  S            :: S8|S16|S32|S64
+  B            :: B8|B16|B32|B64
+*/
+
+enum Str8_fmt_parser_node_kind {
+  Str8_fmt_parser_node_kind__regular_text,
+  Str8_fmt_parser_node_kind__fmt_scope,
+};
+
+enum Str8_fmt_parser_fmt_specifier_kind {
+  Str8_fmt_parser_fmt_specifier_kind__U8,
+  Str8_fmt_parser_fmt_specifier_kind__U16,
+  Str8_fmt_parser_fmt_specifier_kind__U32,
+  Str8_fmt_parser_fmt_specifier_kind__U64,
+};
+
+struct Str8_fmt_parser_node {
+  Str8_fmt_parser_node* next;
+  Str8_fmt_parser_node* prev;
+  Str8_fmt_parser_fmt_specifier_kind fmt_specifier_kind;
+};
+
+struct Str8_fmt_parser_list {
+  Str8_fmt_parser_node* first;
+  Str8_fmt_parser_node* last;
+  U32 node_count;
+};
+
+struct Str8_fmt_parser_node_inputs {
+
+};
+
+
+
+
+void str8_fmt_parse(Arena* arena, const char* fmt)
 {
   Str8_fmt_lexer lexer = {};
   lexer.input_str = str8_from_cstr(fmt);
-  str8_fmt_parse(fmt);
+
+  Str8_fmt_parser_node_input* root_node = ArenaPush(arena, Str8_fmt_parser_node_input);
+  // root_node->kind = Str8_fmt_parser_node_kind__INPUT;
+  
+  while (!str8_fmt_lexer_is_done(&lexer))
+  {
+    Str8_fmt_parser_node* node = str8_fmt_parse_helper(arena, &lexer);
+    DllPushBack(root_node, node);
+  }
+
+  for (Str8_fmt_parser_node* node = root_node->first; node != 0; node = node->next)
+  {
+    if (node->kind == Str8_fmt_parser_node_kind__regular_text)
+    {
+      Str8_fmt_parser_node_regular_text* reg_text_node = &node->u.regular_text;
+      printf("Node --> Regular text node %s \n", reg_text_node->text.data);
+    }
+    if (node->kind == Str8_fmt_parser_node_kind__fmt_scope)
+    {
+      printf("Node --> fmt \n");
+
+    }
+  }
+}
+
+void str8_from_str8_f(Arena* arena, const char* fmt, ...)
+{
+  str8_fmt_parse(arena, fmt);
   
 
   // va_list args = {};
@@ -327,6 +437,8 @@ void str8_from_str8_f(Arena* arena, const char* fmt, ...)
   // Iterate over the passed in string
   // va_arg(args, Type);
 }
+
+#endif
 
 
 // --------
@@ -347,8 +459,9 @@ void EntryPoint()
 {
   Arena* arena = arena_alloc(Kilobytes_U64(10), "Main arena");
 
-  str8_from_str8_f(arena, "{U32} U8 U16 U32 U64 S8 S16 S32 S64 {F32} F64 * Cstr Str8 ... ");
-  str8_from_str8_f(arena, "");
+  // str8_from_str8_f(arena, "{U32} U8 U16 U32 U64 S8 S16 S32 S64 {F32} F64 * Cstr Str8 ... ");
+  str8_from_str8_f(arena, "fasdfasdfasdfasd fafas { fasdfasd }");
+
 
 }
 

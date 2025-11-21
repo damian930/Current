@@ -26,10 +26,7 @@ Str8 str8_from_cstr_len(const char* cstr, U64 len)
 
 Str8 str8_from_cstr(const char* cstr)
 {
-  U64 len = 0;
-  while (cstr[len] != '\0') {
-    len += 1;
-  }
+  U64 len = get_cstr_len(cstr);
   Str8 str = str8_from_cstr_len(cstr, len);
   return str;
 }
