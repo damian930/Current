@@ -4,7 +4,8 @@
 #include "string.h"
 
 enum Str8_fmt_token_kind {
-  Str8_fmt_token_kind__regular_text,
+  Str8_fmt_token_kind__Other_char
+  ,
   Str8_fmt_token_kind__integer_value,
 
   Str8_fmt_token_kind__fmt_scope_starter,
@@ -47,6 +48,7 @@ struct Str8_fmt_lexer {
 
 enum Str8_fmt_scope_specifier {
   Str8_fmt_scope_specifier__regular_text,
+  
   Str8_fmt_scope_specifier__U8,
   Str8_fmt_scope_specifier__U16,
   Str8_fmt_scope_specifier__U32,
@@ -111,10 +113,44 @@ Str8 str8_from_u64_hex(Arena* arena, U64 u64);
 Str8 str8_from_p(Arena* arena, void* p);
 Str8 str8_from_str8_f(Arena* arena, const char* fmt, ...);
 
+// TODO: Think about telling the user to pass in a value that i will then return if fail to create this
+//       Kind of a light weight alternative to making the caller unwrap an optional every time
 U64 u64_from_str8(Str8 str)
 {
-  // TODO:
-  return 3;
+  // TODO: Fix this code here pls
+
+  Assert(str.count > 0);
+
+  B32 is_convertable = true;
+  ForEachEx(i, str.count, str.data)
+  {
+    if (!is_char_a_number(str.data[i])) 
+    {
+      is_convertable = false;
+      break;
+    }
+  }
+  Assert(is_convertable);
+
+  // TODO: Math intrinsics 
+  U64 multiplier = 1;
+  if (str.count > 1)
+  {
+    ForEachEx(i, str.count - 1, str.data)
+    {
+      multiplier *= 10;
+    }
+  }
+
+  U64 result_value = 0;
+  ForEachEx(i, str.count, str.data)
+  {
+    U64 value = (str.data[i] - '0') * (multiplier);
+    multiplier /= 10;
+    result_value += value;
+  }
+
+  return result_value;
 }
 
 

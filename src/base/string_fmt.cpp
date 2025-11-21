@@ -112,29 +112,26 @@ Str8_fmt_token str8_fmt_lexer_eat_next_token(Str8_fmt_lexer* lexer)
     else if (str8_fmt_lexer_match_cstr(lexer, "Str8")) { token = str8_fmt_lexer_create_token(lexer, Str8_fmt_token_kind__Str8); }
     else if (str8_fmt_lexer_match_cstr(lexer, "P")) { token = str8_fmt_lexer_create_token(lexer, Str8_fmt_token_kind__Pointer_star); }
 
-    else if (str8_fmt_lexer_match_cstr(lexer, "<:")) { token = str8_fmt_lexer_create_token(lexer, Str8_fmt_token_kind__align_right_flag); }
+    else if (str8_fmt_lexer_match_cstr(lexer, ":<")) { token = str8_fmt_lexer_create_token(lexer, Str8_fmt_token_kind__align_right_flag); }
 
     else if (str8_fmt_lexer_match_cstr(lexer, "#")) { token = str8_fmt_lexer_create_token(lexer, Str8_fmt_token_kind__fmt_scope_starter); }
 
     else 
     {
       // Integer numbers
-      if (is_char_a_number(str8_fmt_lexer_peek_char(lexer)))
+      if (is_char_a_number(test_char))
       {
-        while (str8_fmt_lexer_is_alive(lexer) &&  is_char_a_number(str8_fmt_lexer_peek_char(lexer)))
+        str8_fmt_lexer_eat_char(lexer); // Damian: I know this is extra code, but i just want this to be clear here
+        while (str8_fmt_lexer_is_alive(lexer) && is_char_a_number(str8_fmt_lexer_peek_char(lexer)))
         {
           str8_fmt_lexer_eat_char(lexer);
         }
         token = str8_fmt_lexer_create_token(lexer, Str8_fmt_token_kind__integer_value);
       }
-      else // Just other stuff (Regular text) 
+      else // No match 
       {
-        // Eating stuff until we have found a start for the new fmt scope
-        while (str8_fmt_lexer_is_alive(lexer) && str8_fmt_lexer_peek_char(lexer) != '#')
-        {
-          str8_fmt_lexer_eat_char(lexer);
-        }
-        token = str8_fmt_lexer_create_token(lexer, Str8_fmt_token_kind__regular_text);
+        str8_fmt_lexer_eat_char(lexer);
+        token = str8_fmt_lexer_create_token(lexer, Str8_fmt_token_kind__Other_char);
       }
     }
 
@@ -194,11 +191,14 @@ Str8_fmt_scope_list* str8_fmt_create_specifier_list(Arena* arena, const char* fm
     Str8_fmt_scope* new_scope = ArenaPush(arena, Str8_fmt_scope);
     
     Str8_fmt_token token = str8_fmt_lexer_eat_next_token(&lexer);
-    if (token.kind == Str8_fmt_token_kind__regular_text)
+    if (token.kind == Str8_fmt_token_kind__Other_char)
     {
-      // While we are eating the regular text, just keep appending them 
+      U64 lexer_start_index = lexer.token_start_index;
+      while (   str8_fmt_lexer_is_alive(&lexer) 
+             && str8_fmt_lexer_match_next_token(&lexer, Str8_fmt_token_kind__Other_char)
+      ) {}
       new_scope->specifier = Str8_fmt_scope_specifier__regular_text;
-      new_scope->str = token.str;
+      new_scope->str = str8_substring_index(lexer.input_str, lexer_start_index, lexer.current_index); 
     }
     else if (token.kind == Str8_fmt_token_kind__fmt_scope_starter)
     {
@@ -220,8 +220,7 @@ Str8_fmt_scope_list* str8_fmt_create_specifier_list(Arena* arena, const char* fm
       
       else  
       {
-        // Just a scope starter then 
-        // Weren't able to get a valid specifier, just regular text then
+        // No specifier was found, so this means that the scope starter is just regular text
         specifier_found = false;
         new_scope->specifier = Str8_fmt_scope_specifier__regular_text;
         new_scope->str = token.str;
@@ -261,7 +260,11 @@ Str8 str8_fmt_format(Arena* arena, const char* fmt, va_list args)
     for (Str8_fmt_scope* scope = specifier_list->first; scope != 0; scope = scope->next)
     {
       Str8 formated = {};
-      if (scope->specifier == Str8_fmt_scope_specifier__regular_text)     { formated = scope->str; }
+      if (scope->specifier == Str8_fmt_scope_specifier__regular_text) 
+      { 
+        // TODO: Go until the fist real token is found. Then just make a substring in range from start of lexer to the current thing 
+        formated = scope->str; 
+      }
       
       else if (scope->specifier == Str8_fmt_scope_specifier__U8)  { formated = str8_from_u64(scratch.arena, (U64)va_arg(args, U8)); }
       else if (scope->specifier == Str8_fmt_scope_specifier__U16) { formated = str8_from_u64(scratch.arena, (U64)va_arg(args, U16)); }
@@ -286,11 +289,23 @@ Str8 str8_fmt_format(Arena* arena, const char* fmt, va_list args)
       if (scope->flag == Str8_fmt_scope_flag__align_left)
       {
         U64 align_value = (U64)scope->value_for_the_flag;
-        // todo: Align algorithm
-        printf(" -- Align alorithm here -- ");
+        U64 chars_needed_to_align = 0;
+        if (align_value > formated.count)
+        {
+          chars_needed_to_align = align_value - formated.count;
+        }
+        Str8 align_str = data_buffer_make(scratch.arena, chars_needed_to_align);
+        ForEachEx(i, align_str.count, align_str.data)
+        {
+          align_str.data[i] = ' '; // Sep
+        }
+        str8_list_push_str(scratch.arena, final_str_list, formated);
+        str8_list_push_str(scratch.arena, final_str_list, align_str);
       }
-
-      str8_list_push_str(scratch.arena, final_str_list, formated);
+      else 
+      {
+        str8_list_push_str(scratch.arena, final_str_list, formated);
+      }
     }
     
     // Pushing the final String onto the passed in arena

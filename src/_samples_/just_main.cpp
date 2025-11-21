@@ -20,20 +20,41 @@ void EntryPoint()
 {
   Arena* arena = arena_alloc(Kilobytes_U64(64), "Arena just main");
   
-  Str8_fmt_lexer lexer = {};
-  lexer.input_str = Str8FromClit("--> #U32:<10 <-- ");
+  // str8_printf("Token_str: #Str8 \n", Str8FromClit("__str__")); 
 
-  while (str8_fmt_lexer_is_alive(&lexer))
+  // Str8_fmt_lexer lexer = {};
+  // lexer.input_str = Str8FromClit("--> #U32:<10 <-- ");
+
+  // while (str8_fmt_lexer_is_alive(&lexer))
+  // {
+  //   Str8_fmt_token token = str8_fmt_lexer_eat_next_token(&lexer);
+  //   str8_printf("Token_str: #Str8 \n", token.str);
+  // }
+
   {
-    Str8_fmt_token token = str8_fmt_lexer_eat_next_token(&lexer);
-    str8_printf("Token_str: #Str8 \n", token.str);
+    U64 value = u64_from_str8(Str8FromClit("0"));
+    printf("%lld \n", value);
   }
 
-  // for (U32 i = 10; i < 10000000; i *= 10)
+  {
+    U64 value = u64_from_str8(Str8FromClit("123"));
+    printf("%lld \n", value);
+  }
+
+  {
+    U64 value = u64_from_str8(Str8FromClit("41432123"));
+    printf("%lld \n", value);
+  }
+
   // {
-  //   // str8_printf("I --> #U32 <-- \n", i);
-  //   str8_printf("I --> #U32:<10 <-- \n", i);
+    // U64 value = u64_from_str8(Str8FromClit("12a3"));
+    // printf("%lld \n", value);
   // }
+
+  for (U32 i = 10; i < 10000000; i *= 10)
+  {
+    str8_printf("I --> #U32:<10 <-- \n", i);
+  }
 
 
 

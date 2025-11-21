@@ -1,8 +1,7 @@
 .vscode
 build/*
 !build/main.exe
-Browse.VC.opendb
-
+**/.vs
 
 
 

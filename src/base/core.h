@@ -8,7 +8,9 @@
 
 // TODO: Add rjd/martins like preprocesor define for platforms, bitnes, debug/release ...
 
-
+#ifndef DEBUG_MODE
+#define DEBUG_MODE 1
+#endif
 
 typedef int8_t   S8;
 typedef int16_t  S16;
@@ -56,7 +58,7 @@ typedef S64 B64;
 #define ForEachEnum(it_name, Enum_name)  ForEnum_Name(it_name, Enum_name, Enum_name##_COUNT)
 
 #define Assert(expr, ...) do {} while(false) 
-#if DEBUG_MODE 
+#if DEBUG_MODE
 	#undef Assert
 	#define Assert(expr, ...) do { if (!(expr)) {*((int*)0) = 69;} } while(false)
 	// #define Assert(expr, ...) do { __ } while(false)
