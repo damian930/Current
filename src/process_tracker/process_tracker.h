@@ -140,9 +140,10 @@ Time time_from_win32_system_time(SYSTEMTIME* sys_time)
 
 Str8 time_as_str8(Arena* arena, Time time)
 {
+  UnusedVar(arena);`
   U8 buffer[512];
   sprintf((char*)buffer, "%d:%d", time.hour, time.minute);
-  Str8 str = str8_from_cstr(arena, (char*)buffer);
+  Str8 str = str8_from_cstr((char*)buffer);
   return str;
 }
 

@@ -5,6 +5,9 @@
 #include "arena.cpp"
 #include "math.cpp"
 
+#include "string_fmt.h"
+#include "string_fmt.cpp"
+
 ///////////////////////////////////////////////////////////
 // Damian: Constructors 
 //
@@ -43,6 +46,16 @@ Str8 str8_from_str8_alloc(Arena* arena, Str8 other_str8)
   arena_pop(arena, 1);
   return str;
 }
+
+Str8 str8_from_fmt_alloc(Arena* arena, const char* fmt, ...)
+{
+  va_list args = {};
+  va_start(args, fmt);
+  Str8 formated_str = str8_fmt_format(arena, fmt, args);
+  va_end(args);
+  return formated_str;
+}
+
 
 // ---------- TODO: This is to be marked when its done
 
@@ -285,6 +298,17 @@ Data_buffer data_buffer_make(Arena* arena, U64 size)
   return buffer;
 }
 
+void str8_printf(const char* fmt, ...)
+{
+  va_list args = {};
+  DefereInitReleaseLoop(va_start(args, fmt), va_end(args))
+  DefereInitReleaseLoop(Scratch scratch = get_scratch(), end_scratch(&scratch))
+  {
+    Str8 formated_str = str8_fmt_format(scratch.arena, fmt, args);
+    Str8 formated_str_nt = str8_from_str8_alloc(scratch.arena, formated_str);
+    printf("%s", formated_str_nt.data);
+  }
+}
 
 
 

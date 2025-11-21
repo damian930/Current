@@ -39,6 +39,7 @@ Str8 str8_empty();
 Str8 str8_from_cstr_len(const char* cstr, U64 len);
 Str8 str8_from_cstr(const char* cstr);
 Str8 str8_from_str8_alloc(Arena* arena, Str8 str8);
+Str8 str8_from_fmt_alloc(Arena* arena, const char* fmt, ...);
 #define Str8FromClit(clit) str8_from_cstr_len(clit, ArrayCount(clit) - 1)
 // NOTE: str8_from_str8_alloc procduces an array that is null terminated until the next allocation on the same arena
 
@@ -67,6 +68,9 @@ Str8 get_file_extension(Str8 path);
 // Damian: Some extra stuff
 Data_buffer data_buffer_make(Arena* arena, U64 size);
 U64 get_cstr_len(const char* name);
+
+void str8_printf(const char* fmt, ...);
+
 
 #endif
 

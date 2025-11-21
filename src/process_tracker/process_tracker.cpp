@@ -79,7 +79,7 @@ Process_data_list* get_all_process_data(Arena* arena)
           if (succ) 
           {
             Str8 name = str8_substring_range(name_buffer, range_u64(0, bytes_written_no_nt + 1));
-            process_data->path = str8_from_str8(arena, name);
+            process_data->path = str8_from_str8_alloc(arena, name);
           }
         }
 

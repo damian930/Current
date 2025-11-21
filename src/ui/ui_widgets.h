@@ -17,7 +17,7 @@ UI_Inputs ui_label(Str8 key, Str8 str)
 UI_Inputs ui_label(const char* key, Str8 str)
 {
   Scratch scratch = get_scratch();
-  Str8 key_str8 = str8_from_cstr(scratch.arena, key);
+  Str8 key_str8 = str8_from_cstr(key);
   UI_Inputs inputs = ui_label(key_str8, str);
   end_scratch(&scratch);
   return inputs;
@@ -25,6 +25,8 @@ UI_Inputs ui_label(const char* key, Str8 str)
 
 void ui_spacer(Arena* arena, Axis2 axis)
 {
+  UnusedVar(arena);
+
   if (axis == Axis2_x)
   {
     DefereLoop(ui_push_size_x(ui_size_fit_the_parent_make(1)), ui_pop_size_x())
@@ -32,7 +34,7 @@ void ui_spacer(Arena* arena, Axis2 axis)
     // DefereLoop(ui_push_size_y(ui_size_px_make(5.0f)), ui_pop_size_y())
     // DefereLoop(ui_push_background_color(C_YELLOW), ui_pop_background_color()) // This is here for now to see the spacer working properly
     {
-      ui_box_make(Str8FromClit(arena, "spacer"), UI_box_flag__has_backgound|UI_box_flag__NONE, str8_empty());
+      ui_box_make(Str8FromClit("spacer"), UI_box_flag__has_backgound|UI_box_flag__NONE, str8_empty());
     }
   }
   else if (axis == Axis2_y)

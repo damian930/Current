@@ -52,7 +52,7 @@ void EntryPoint()
   Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
   // #define FONT_PATH "../data/papyrus.ttf"
   #define FONT_PATH "../data/Roboto-Regular.ttf"
-  Font_info* font_info = load_font(font_arena, range_u32(' ' + 1, '~'), 32, Str8FromClit(font_arena, FONT_PATH));
+  Font_info* font_info = load_font(font_arena, range_u32(' ' + 1, '~'), 32, Str8FromClit(FONT_PATH));
 
   Arena* process_arena = arena_alloc(Megabytes_U64(10), "Process arena");
   Process_data_list* list = get_all_process_data(process_arena);
@@ -63,7 +63,7 @@ void EntryPoint()
   // }
 
   Arena* image_arena = arena_alloc(Megabytes_U64(30), "Image test arena");
-  Image2D jimmy_image = load_png(image_arena, Str8FromClit(image_arena, "../data/jimmy.png"), false);
+  Image2D jimmy_image = load_png(image_arena, Str8FromClit("../data/jimmy.png"), false);
   Texture2D jimmy_texture = load_texture(jimmy_image);
   
   Win32_window* window = 0;
@@ -94,7 +94,7 @@ void EntryPoint()
               ui_set_background_color(C_BROWN);
 
               local F32 slider_value = 0.0f;
-              ui_slider(Str8FromClit(str_arena, "Slider"), &slider_value, 0, 100);
+              ui_slider(Str8FromClit("Slider"), &slider_value, 0, 100);
               printf("Slider value: %f \n", slider_value);
 
               #if 0 // First test for overflow

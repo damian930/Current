@@ -174,7 +174,7 @@ UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text)
   Arena* arena = ui_current_build_arena();
   UI_Box* box = ArenaPush(ui_current_build_arena(), UI_Box);
   
-  box->key = str8_from_str8(arena, key);
+  box->key = str8_from_str8_alloc(arena, key);
   box->semantic_size[Axis2_x] = ui_current_size_x();
   box->semantic_size[Axis2_y] = ui_current_size_y();
   box->layout_axis = ui_current_layout_axis();
@@ -189,7 +189,7 @@ UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text)
   }
   if (flags & UI_box_flag__has_text)
   {
-    box->text = str8_from_str8(arena, text); 
+    box->text = str8_from_str8_alloc(arena, text); 
     box->text_color = ui_current_text_color(); 
   }
   if (flags & UI_box_flag__draw_padding)
@@ -210,7 +210,7 @@ UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text)
 UI_Box* ui_allocated_and_set_up_box(const char* key, UI_box_flags flags, Str8 text)
 {
   Scratch scratch = get_scratch();  
-  UI_Box* box = ui_allocated_and_set_up_box(str8_from_cstr(scratch.arena, key), flags, text);
+  UI_Box* box = ui_allocated_and_set_up_box(str8_from_cstr(key), flags, text);
   end_scratch(&scratch);
   return box;
 }
@@ -590,7 +590,7 @@ void ui_final_pos_pass(UI_Box* root)
 void ui_draw_ui_helper(UI_Box* root)
 { 
   Scratch scratch = get_scratch();
-  if (str8_match(root->key, Str8FromClit(scratch.arena, "Clay like box"), Str8_match_flag_NONE))
+  if (str8_match(root->key, Str8FromClit("Clay like box"), Str8_match_flag_NONE))
   {
     // DebugStopHere();
   }
