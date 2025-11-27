@@ -634,7 +634,7 @@ void _json_debug_recreate_json_HELPER(Arena* arena, Json_value* ast, Str8_list* 
         {
           str8_list_push_str(arena, out_json_list, Str8FromClit(", "));
         }
-      }
+      }0
       str8_list_push_str(arena, out_json_list, Str8FromClit("}"));
     } break;
   }
