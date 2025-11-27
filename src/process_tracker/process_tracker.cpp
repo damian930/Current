@@ -71,29 +71,18 @@ Process_data_list* get_all_process_data(Arena* arena)
         // TODO: Think about this here, scratch on scratch issue :TODO:
         // TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:TODO:
         {
-          Scratch scratch = get_scratch(); 
+          Scratch scratch = get_scratch(&arena, 1); 
           Data_buffer name_buffer = data_buffer_make(scratch.arena, 512);
           U32 bytes_written_no_nt = (U32)name_buffer.count;  
           BOOL succ = QueryFullProcessImageNameA(handle, 0, (CHAR*)name_buffer.data, (DWORD*)&bytes_written_no_nt); 
           end_scratch(&scratch);
           if (succ) 
           {
-            Str8 name = str8_substring_range(name_buffer, range_u64(0, bytes_written_no_nt + 1));
+            Str8 name = str8_substring_range(name_buffer, range_u64(0, bytes_written_no_nt));
             process_data->path = str8_from_str8_alloc(arena, name);
           }
         }
 
-        // DefereInitReleaseLoop(Scratch scratch = get_scratch(), end_scratch(&scratch))
-        // {
-        //   Data_buffer name_buffer = data_buffer_make(scratch.arena, 512);
-        //   U32 bytes_written_no_nt = (U32)name_buffer.count;  
-        //   BOOL succ = QueryFullProcessImageNameA(handle, 0, (CHAR*)name_buffer.data, (DWORD*)&bytes_written_no_nt); 
-        //   if (succ) 
-        //   {
-        //     Str8 name = str8_substring(name_buffer, 0, bytes_written_no_nt);
-        //     process_data->path = str8_from_str8(arena, name);
-        //   }
-        // }
       }
       
       // Getting process times
@@ -120,9 +109,9 @@ Process_data_list* get_all_process_data(Arena* arena)
 
         process_data->creation_time = time_from_win32_system_time(&s_creation_time) ;
       }
-      
     }
   }
+
   return result_list;
 }
 #endif

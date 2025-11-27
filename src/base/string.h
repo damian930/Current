@@ -54,11 +54,12 @@ B32 is_char_a_number(U8 ch);
 void str8_list_push_str(Arena* arena, Str8_list* list, Str8 str);
 Str8 str8_from_list(Arena* arena, Str8_list* list);
 
-B32 str8_match(Str8 str, Str8 other, Str8_match_flags flags);
-B32 str8_match_cstr(Str8 str, const char* c_str, Str8_match_flags flags);
+B32 str8_match_ex(Str8 str, Str8 other, Str8_match_flags flags);
+B32 str8_match(Str8 str, Str8 other);
 
 Str8 str8_substring_range(Str8 str, Range_U64 range);                  
 Str8 str8_substring_index(Str8 str, U64 start_indexst, U64 index_1_after_last);
+B32 str8_does_contain_substring(Str8 str, Str8 substring, U64* out_start_index);
 
 Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, Str8_match_flags match_flags);
 

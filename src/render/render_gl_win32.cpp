@@ -570,30 +570,28 @@ void test_draw_text(Font_info* font_info, Texture2D font_texture, Str8 text, F32
 
 void test_draw_text_lines(Font_info* font_info, Str8 text, F32 x, F32 y)
 {
-  F32 font_max_height = font_info->ascent - font_info->descent;
+  Vec2_F32 font_dims = font_measure_text(font_info, text);
+  Rect complete_text_rect = rect_make(x, y, font_dims.x, font_dims.y);
   
   // The highest point for a line of text
   {
-    Rect line = rect_make(x, y, 500, 1);
+    Rect line = rect_make(x, y, complete_text_rect.width, 1);
     draw_rect(line, C_GREEN);
   }
 
   // Baseline
   {
-    Rect line = rect_make(x, y + font_info->ascent, 500, 1);
+    Rect line = rect_make(x, y + font_info->ascent, complete_text_rect.width, 1);
     draw_rect(line, C_GREEN);
   }
   
   // The lowest point for a line of text
   {
-    Rect line = rect_make(x, y + font_max_height, 500, 1);
+    Rect line = rect_make(x, y + complete_text_rect.height, complete_text_rect.width, 1);
     draw_rect(line, C_GREEN);
   }
   
-  Vec2_F32 font_dims = font_measure_text(font_info, text);
-  Rect complete_text_rect = rect_make(x, y, 0, font_max_height);
-  complete_text_rect.width = font_dims.x;
-  Assert((U32)font_max_height == (U32)font_dims.y, "Just making sure i understand the ttf here correctly.");
+  Assert((U32)complete_text_rect.height == (U32)font_dims.y, "Just making sure i understand the ttf here correctly.");
   draw_rect(complete_text_rect, vec4_f32(1.0f, 0.0f, 0.0f, 0.3f));
 }
 

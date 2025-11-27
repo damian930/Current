@@ -57,6 +57,8 @@ typedef S64 B64;
 #define ForEnum_Name(it_name, Enum_name, enum_last_value_name) for (U64 it_name = (Enum_name)0; it_name < enum_last_value_name; it_name += 1)
 #define ForEachEnum(it_name, Enum_name)  ForEnum_Name(it_name, Enum_name, Enum_name##_COUNT)
 
+#define StaticAssert(expr, text) static_assert((expr), text)
+
 #define Assert(expr, ...) do {} while(false) 
 #if DEBUG_MODE
 	#undef Assert
@@ -65,12 +67,18 @@ typedef S64 B64;
 #endif
 #define AssertNote(expr, ...) Assert(expr);
 
-#define StaticAssert(expr, text) static_assert((expr), text)
+#if DEBUG_MODE
+#define TempAssert(expr) Assert(expr)
+#endif
+#ifndef TempAssert
+#define TempAssert(expr) StaticAssert(false)
+#endif
 
 // Damian: (...) here are to be able to put anything it. Usually used for string notes.
-#define DebugStopHere(...)  __debugbreak() // TODO: Fix this, this is msvc compiler specific
+#define DebugStopHere(...)   do { __debugbreak(); } while(false) // TODO: Fix this, this is msvc compiler specific
 #define NotImplemented(...)  Assert(false) // TODO: This might even have to be an exit insted of assert
 #define InvalidCodePath(...) Assert(false)
+#define Unhandled(...)       Assert(false) // TODO: This shoud fail at release build with static assert at comp time 
 
 #define ArrayCount(arr) (sizeof(arr) / sizeof(arr[0])) 
 
@@ -85,7 +93,7 @@ typedef S64 B64;
 #define Terabytes_U64(value) (1024 * Gigabytes_U64(value))
 
 #define MemCopy(mem_dst_p, mem_src_p, n_bytes_u64) { memcpy(mem_dst_p, mem_src_p, n_bytes_u64); }
-#define MemSet(mem_p, value_s32, n_bytes_u64)      { memset((void*)mem_p, value_s32, n_bytes_u64); } 
+#define MemSet(mem_p, value_s32, n_bytes_u64)      { memset(mem_p, value_s32, n_bytes_u64); } 
 
 #define StringLine(str) str " \n"
 #define StringNewL "\n"

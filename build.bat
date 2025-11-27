@@ -20,8 +20,10 @@ set out_exe_name="main"
 :: --- Creating the build dir ------------------------------------------------- 
 rmdir %out_dir_name% /s /q
 mkdir %out_dir_name%
+
 :: Removing error messages that some files used by Visual Studio were not deleted, because captured 
 cls
+echo --------------------------------------------------------------------------
 
 :: --- Unpack Arguments -------------------------------------------------------
 for %%a in (%*) do set "%%a=1"
@@ -50,9 +52,20 @@ if "%samples%"=="1" (
     if "%process_data%"=="1" echo [process_data] & cl /nologo /I ../ /Zi process_data.cpp 
     if "%defere_init_macro%"=="1" echo [defere_init_macro] & cl /nologo /I ../ /Zi defere_init_macro.cpp
     if "%just_main%"=="1" echo [just_main] & cl /nologo /I ../ /Zi just_main.cpp 
+    
+    
+    :: This is a special case of a sample program, this one need special compilation 3rt party code
+    if "%dear_ui%"=="1" (
+      echo [dear_ui]
+      pushd "custom_init_for_dear_im_gui_1_00"
+      (
+        cl /nologo /I ../../ /I "dear_im_gui" /I /Zi "main.cpp" "dear_im_gui\imgui.cpp" 
+      )
+      popd
+    )
 
-    erase *.obj
-    erase *.ilk
+    if EXIST *.obj del *.obj
+    if EXIST *.ilk del *.ilk
   )
   popd
   exit /b

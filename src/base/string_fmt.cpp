@@ -84,7 +84,6 @@ Str8_fmt_token str8_fmt_lexer_create_token(Str8_fmt_lexer* fmt_lexer, Str8_fmt_t
 Str8_fmt_token str8_fmt_lexer_eat_next_token(Str8_fmt_lexer* lexer)
 {
   Str8_fmt_token token = {};
-  Assert(str8_fmt_lexer_is_alive(lexer));
   if (!str8_fmt_lexer_is_alive(lexer))
   {
     token.kind = Str8_fmt_token_kind__END;
@@ -228,13 +227,6 @@ Str8_fmt_scope_list* str8_fmt_create_specifier_list(Arena* arena, const char* fm
 
       if (specifier_found)
       {
-        // :<*10
-        // :<10
-        // We are supposed to get the U32, then check for :<. Then there are 3 cases. 
-        // We either have integer after the :<, then we align. 
-        // We might have char and then integer, then we also align
-        // We might just have char after the :<, then its invalid and we just make this regular text 
-
         if (str8_fmt_lexer_match_next_token(&lexer, Str8_fmt_token_kind__align_right_flag))
         {
           if (str8_fmt_lexer_match_next_token(&lexer, Str8_fmt_token_kind__integer_value))
@@ -268,7 +260,6 @@ Str8_fmt_scope_list* str8_fmt_create_specifier_list(Arena* arena, const char* fm
             new_scope->str = Str8FromClit(":<");
           }
         }
-
       }
 
     }
@@ -283,7 +274,7 @@ Str8_fmt_scope_list* str8_fmt_create_specifier_list(Arena* arena, const char* fm
 Str8 str8_fmt_format(Arena* arena, const char* fmt, va_list args)
 {
   Str8 result_str = {}; 
-  DefereInitReleaseLoop(Scratch scratch = get_scratch(), end_scratch(&scratch))
+  DefereInitReleaseLoop(Scratch scratch = get_scratch(&arena, 1), end_scratch(&scratch))
   {
     Str8_fmt_scope_list* specifier_list = str8_fmt_create_specifier_list(scratch.arena, fmt);
     
@@ -478,7 +469,7 @@ Str8 str8_from_str8_f(Arena* arena, const char* fmt, ...)
   va_list args = {};
   DefereLoop(va_start(args, fmt), va_end(args))
   {
-    DefereInitReleaseLoop(Scratch scratch = get_scratch(), end_scratch(&scratch))
+    DefereInitReleaseLoop(Scratch scratch = get_scratch(&arena, 1), end_scratch(&scratch))
     {
       Str8_fmt_scope_list* specifier_list = str8_fmt_create_specifier_list(scratch.arena, fmt);
       

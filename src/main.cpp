@@ -25,6 +25,9 @@
 #include "ui/ui_widgets.h"
 #include "ui/ui_widgets.cpp"
 
+#include "process_tracker/process_tracker.h"
+#include "process_tracker/process_tracker.cpp"
+
 // Damian: On November 14th the codebase had 4k lines, 700 comments, 1100 blanks.
 
 void EntryPoint();
@@ -45,8 +48,165 @@ int main()
   return 0;
 }
 
-#include "process_tracker/process_tracker.h"
-#include "process_tracker/process_tracker.cpp"
+#include "json/json.h"
+#include "json/json.cpp"
+void EntryPoint()
+{
+  Arena* arena = arena_alloc(Kilobytes_U64(64), "Json arena");
+  
+  DefereInitReleaseLoop(Scratch scratch = get_scratch(0, 0), end_scratch(&scratch))
+  {
+    Data_buffer file_buffer = os_win32_file_read_inplace(scratch.arena, Str8FromClit("../src/json/json_test.json"));
+    Json_value* ast = test_create_ast_for_json(arena, file_buffer);
+    Str8 json_as_str = json_debug_recreate_json(arena, ast);
+    str8_printf("#Str8 \n", json_as_str); 
+  }
+
+}
+
+// -----
+
+#if 0
+
+UI_Inputs pt_button(Str8 key)
+{
+  UI_Inputs inputs = {};
+  UI_SizeX(ui_size_child_sum_make())
+  UI_SizeY(ui_size_child_sum_make())
+  UI_Padding(15)
+  UI_LayoutAxis(Axis2_x)
+  UI_BoxLoop(key, UI_box_flag__has_backgound|UI_box_flag__clickable)
+  {
+    inputs = ui_get_inputs_from_prev_build();
+
+    Color background_color = color_normalise(44, 46, 49, 255);
+    if (inputs.is_hovered) { 
+      background_color.r += 0.075f;
+      background_color.g += 0.075f;
+      background_color.b += 0.075f;
+    }
+    ui_set_background_color(background_color);
+    ui_set_text_color(C_WHITE);
+
+    UI_SizeX(ui_size_text_make())
+    UI_SizeY(ui_size_text_make())
+    UI_BoxLoop(key, UI_box_flag__has_text) {}
+  }
+  
+  return inputs;
+}
+
+void pt_label(Str8 text)
+{
+  UI_SizeX(ui_size_text_make())
+  UI_SizeY(ui_size_text_make())
+  UI_Padding(0)
+  UI_BoxLoop(text, UI_box_flag__has_text|UI_box_flag__has_backgound|UI_box_flag__draw_text_box) {}
+}
+
+void pt_menu()
+{
+  UI_SizeX(ui_size_child_sum_make())
+  UI_SizeY(ui_size_fit_the_parent_make(1.0f))
+  UI_Padding(10)
+  UI_ChildGap(10)
+  UI_BoxLoop(Str8FromClit("Pt_menu"), UI_box_flag__has_backgound)
+  {
+    ui_set_background_color(C_LIGHT_GREEN);
+    UI_Inputs inputs = pt_button(Str8FromClit("Show processes##1"));
+    if (inputs.is_clicked)
+    {
+      str8_printf("Button clicked \n");
+    }
+  }
+}
+
+
+void pt_data_part()
+{
+  UI_LayoutAxis(Axis2_y)
+  UI_SizeX(ui_size_fit_the_parent_make(1))
+  UI_SizeY(ui_size_fit_the_parent_make(1))
+  UI_Padding(10)
+  UI_ChildGap(10)
+  UI_BoxLoop(Str8FromClit("Data part vstack"), UI_box_flag__has_backgound)
+  {
+    ui_set_background_color(C_BROWN);
+  
+    // Row for the names of the stuff
+    UI_SizeX(ui_size_fit_the_parent_make(1))
+    UI_SizeY(ui_size_child_sum_make())
+    UI_LayoutAxis(Axis2_x)
+    UI_BoxLoop(Str8FromClit("Data kinds row"), UI_box_flag__has_backgound)
+    {
+      ui_set_background_color(C_BLUE);
+      pt_label(Str8FromClit("Name##"));
+      pt_label(Str8FromClit("Start Time##"));
+      pt_label(Str8FromClit("Elapsed Time##"));
+    }
+    
+    // Rows for process data
+    UI_SizeX(ui_size_fit_the_parent_make(1))
+    UI_SizeY(ui_size_child_sum_make())
+    UI_LayoutAxis(Axis2_y)
+    UI_BoxLoop(Str8FromClit("Data kinds row"), UI_box_flag__has_backgound)
+    {
+      Arena* fake_scratch_arena = arena_alloc(Kilobytes_U64(60), "Fake scratch");
+      {
+        Process_data_list* list = get_all_process_data(fake_scratch_arena);
+        for (Process_data_node* node = list->first; node != 0; node = node->next)
+        {
+          if (node->process_data.path.count > 0)
+          {
+            UI_SizeX(ui_size_fit_the_parent_make(1))
+            UI_SizeY(ui_size_child_sum_make())
+            UI_LayoutAxis(Axis2_x)
+            UI_BoxLoop(Str8FromClit("123123"), UI_box_flag__has_backgound|UI_box_flag__draw_child_gap)
+            {
+              ui_set_child_gap(40);
+              ui_set_child_gap_color(C_RED);
+              ui_set_background_color(C_BLUE);
+              ui_set_padding(0);
+              
+              Process_data* data = &node->process_data;
+              {
+                Time current_local_time = os_win32_get_current_time_utc();
+
+                UI_BackgroundColor(C_LIGHT_GREEN)
+                {
+                  pt_label(data->path);
+                }
+
+                UI_BackgroundColor(C_GREEN)
+                UI_SizeX(ui_size_fit_the_parent_make(1))
+                UI_SizeY(ui_size_fit_the_parent_make(1))
+                UI_BoxLoop(Str8FromClit("Spacer test"), UI_box_flag__has_backgound) {}
+                
+                Str8 time = time_as_str8(fake_scratch_arena, data->creation_time);
+                pt_label(time);
+                
+                UI_BackgroundColor(C_GREEN)
+                UI_SizeX(ui_size_fit_the_parent_make(1))
+                UI_SizeY(ui_size_fit_the_parent_make(1))
+                UI_BoxLoop(ui_null_key(), UI_box_flag__has_backgound) {}
+
+                pt_label(time_as_str8(fake_scratch_arena, current_local_time));
+              }
+            }
+            
+            UI_SizeX(ui_size_fit_the_parent_make(1))
+            UI_SizeY(ui_size_px_make(1))
+            UI_BackgroundColor(C_BLACK)
+            UI_BoxLoop(ui_null_key(), UI_box_flag__has_backgound) {}
+          }
+            
+        }
+      }
+      arena_release(fake_scratch_arena); 
+    }
+  }
+}
+
 void EntryPoint()
 {
   Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
@@ -90,242 +250,59 @@ void EntryPoint()
           {
             DefereLoop(ui_begin_build(), ui_end_build())
             {
-              ui_set_padding(50);
-              ui_set_background_color(C_BROWN);
-
-              local F32 slider_value = 0.0f;
-              ui_slider(Str8FromClit("Slider"), &slider_value, 0, 100);
-              printf("Slider value: %f \n", slider_value);
-
-              #if 0 // First test for overflow
-              UI_BackgroundColor(C_RED)
-              UI_BoxLoop(Str8FromClit(str_arena, "V_Stack"), UI_box_flag__has_backgound, str8_empty())
+              ui_set_background_color(C_GREY);
+             
+              UI_LayoutAxis(Axis2_x)
+              UI_BoxLoop(Str8FromClit("Main"), UI_box_flag__NONE)
               {
-                ui_set_layout_axis(Axis2_x);
-                ui_set_size_x(ui_size_px_make(400, 1));
-                ui_set_size_y(ui_size_px_make(400, 1));
-
-                ui_label(Str8FromClit(str_arena, "label"), Str8FromClit(str_arena, "TextTextText"));
-
-                UI_BackgroundColor(C_PURPLE)
-                UI_SizeX(ui_size_percent_of_parent_make(1.0f))
-                UI_SizeY(ui_size_percent_of_parent_make(1.0f))
+                ui_set_size_x(ui_size_fit_the_parent_make(1));
+                ui_set_size_y(ui_size_fit_the_parent_make(1));
+                
+                UI_LayoutAxis(Axis2_x)
+                UI_SizeX(ui_size_fit_the_parent_make(1))
+                UI_SizeY(ui_size_fit_the_parent_make(1))
+                UI_Padding(50)
+                UI_ChildGap(10)
+                UI_BoxLoop(Str8FromClit("Data part vstack"), UI_box_flag__has_backgound)
                 {
-                  UI_BoxLoop(Str8FromClit(str_arena, "spacer"), UI_box_flag__has_backgound, str8_empty())
-                  {
+                  ui_set_background_color(C_BROWN);
+                  ui_draw_padding_for_current(C_LIGHT_GREEN);
 
-                  }  
-                }  
+                  pt_label(Str8FromClit("Some text"));
 
+                  UI_SizeX(ui_size_fit_the_parent_make(1))
+                  UI_SizeY(ui_size_px_make(1))
+                  UI_BackgroundColor(C_BLUE)
+                  UI_BoxLoop(Str8FromClit("Spacer"), UI_box_flag__has_backgound) {}
 
-              }
-              #endif
+                  pt_label(Str8FromClit("Some text"));
 
+                  UI_SizeX(ui_size_fit_the_parent_make(0.3f))
+                  UI_SizeY(ui_size_px_make(1))
+                  UI_BackgroundColor(C_BLUE)
+                  UI_BoxLoop(Str8FromClit("Spacer"), UI_box_flag__has_backgound|UI_box_flag__text_colapse) {}
 
+                  pt_label(Str8FromClit("S"));
 
-              #if 0 // Clay demo like manu
-              UI_BoxLoop(Str8FromClit(str_arena, "V_Stack"), UI_box_flag__has_backgound, str8_empty())
-              {
-                ui_set_layout_axis(Axis2_y);
-                ui_set_padding(10);
-                ui_set_child_gap(10);
-                ui_set_size_x(ui_size_px_make(400, 1.0f));
-                ui_set_size_y(ui_size_child_sum_make());
+                  UI_SizeX(ui_size_fit_the_parent_make(1))
+                  UI_SizeY(ui_size_px_make(1))
+                  UI_BackgroundColor(C_BLUE)
+                  UI_BoxLoop(Str8FromClit("Spacer"), UI_box_flag__has_backgound) {}
 
-                char* button_names[] = {"Copyfasdasdfsdfasfasfasfasffasd", "Paste", "Delete", "Comment"};
-
-                ForEach(button_index, button_names)
-                {
-                  UI_LayoutAxis(Axis2_x)
-                  UI_Padding(15)
-                  UI_ChildGap(0)
-                  UI_SizeX(ui_size_fit_the_parent_make())
-                  UI_SizeY(ui_size_child_sum_make())
-                  UI_BackgroundColor(C_PURPLE)
-                  UI_BoxLoop(Str8FromClit(str_arena, "Button Row 1"), UI_box_flag__has_backgound, str8_empty())
-                  {
-                    UI_BackgroundColor(C_BLUE)
-                    {
-                      ui_label("Copy button", str8_from_cstr(str_arena, button_names[button_index]));
-                    }
-                    ui_spacer(str_arena, Axis2_x);
-                    ui_image_pro(Str8FromClit(str_arena, "Image"), jimmy_texture, 50, 50);
-                  }
+                  pt_label(Str8FromClit("Other text"));
                 }
 
+                // pt_menu();
+                // pt_data_part();
               }
-              #endif
-
-              #if 0
-              DefereLoop(ui_push_size_x(ui_size_percent_of_parent_make(1)), ui_pop_size_x())
-              DefereLoop(ui_push_size_y(ui_size_percent_of_parent_make(1)), ui_pop_size_y())
-              DefereLoop(ui_push_background_color(C_GREY), ui_pop_background_color())
-              DefereLoop(ui_push_padding(15), ui_pop_padding())
-              DefereLoop(ui_push_child_gap(1), ui_pop_child_gap())
-              DefereLoop(ui_push_padding_color(C_LIGHT_GREEN), ui_pop_padding_color())
-              DefereLoop(ui_push_child_gap_color(C_MAGENTA), ui_pop_child_gap_color())
-              DefereLoop(ui_push_layout_axis(Axis2_y), ui_pop_layout_axis())
-              UI_BoxLoop(Str8FromClit(str_arena, "Image test"), UI_box_flag__NONE, str8_empty())
-              {
-                UI_BoxLoop(Str8FromClit(str_arena, "Key v stack"), UI_box_flag__has_backgound|UI_box_flag__draw_padding|UI_box_flag__draw_child_gap, str8_empty())
-                {
-                  U32 node_index = 0;
-                  for (Process_data_node* node = list->first; node != 0; node = node->next, node_index += 1)
-                  {
-                    DefereLoop(ui_push_size_x(ui_size_child_sum_make()), ui_pop_size_x())
-                    // DefereLoop(ui_push_size_y(ui_size_child_sum_make()), ui_pop_size_y())
-                    // DefereLoop(ui_push_size_x(ui_size_percent_of_parent_make(1)), ui_pop_size_x())
-                    DefereLoop(ui_push_size_y(ui_size_child_sum_make()), ui_pop_size_y())
-                    DefereLoop(ui_push_layout_axis(Axis2_x), ui_pop_layout_axis())
-                    DefereLoop(ui_push_background_color(C_RED), ui_pop_background_color())
-                    UI_BoxLoop(Str8FromClit(str_arena, "Row"), UI_box_flag__has_backgound, str8_empty())
-                    {
-                      DefereLoop(ui_push_background_color(C_BROWN), ui_pop_background_color())
-                      DefereLoop(ui_push_padding(0), ui_pop_padding())
-                      UI_BoxLoop(Str8FromClit(str_arena, "Image and name box"), UI_box_flag__has_backgound, str8_empty())
-                      {
-                        ui_image_pro(Str8FromClit(str_arena, "Image key"), jimmy_texture, 50, 50);
-                        DefereLoop(ui_push_background_color(C_BLUE), ui_pop_background_color())
-                        {
-                          ui_label(Str8FromClit(str_arena, "row key"), get_file_basename(node->process_data.path));
-                        }
-                      }
-                      
-                      ui_spacer(Axis2_x);
-                      
-                      DefereLoop(ui_push_background_color(C_BLUE), ui_pop_background_color())
-                      {
-                        ui_label(Str8FromClit(str_arena, "row key"), time_as_str8(str_arena, node->process_data.creation_time));
-                      }
-                      
-                    }
-                  }
-                  
-                }
-              }
-              #endif
             }
             ui_draw_ui();
           } 
-            
         } 
-      } 
-
-    }
-  }
-}
-
-#if 0
-void EntryPoint()
-{
-  Arena* font_arena = arena_alloc(Megabytes_U64(10), "Font test arena");
-  // #define FONT_PATH "../data/papyrus.ttf"
-
-  #define FONT_PATH "../data/Roboto-Regular.ttf"
-  Font_info* font_info = load_font(font_arena, range_u32('!', '~'), 52, Str8FromClit(font_arena, FONT_PATH));
-
-  // for (Font_kern_node* node = font_info->kern_list.first; node != 0; node = node->next)
-  // {
-    // printf("(%c), (%c), (%f) \n", node->kern_pair.codepoint1, node->kern_pair.codepoint2, node->kern_pair.advance);
-  // }
-
-  Win32_window* window = 0;
-  DefereLoop(window = win32_create_window(), win32_close_window(window)) 
-  {
-    // TODO: Thing about not having ui init take paramets and just set them like for renderer to keep the layer init clean
-    DefereLoop(ui_state_init(window, font_info), ui_state_release()) 
-    {
-      Texture2D font_texture = create_a_texture_from_font_atlas(font_info);
-      ui_equip_font_texture(font_texture);
-      DefereLoop(r_gl_win32_equip_window(window), r_gl_win32_remove_window()) 
-      {
-        r_gl_win32_set_frame_rate(144);
-        
-        while (!win32_window_shoud_close(window))
-        {
-          DefereLoop(r_gl_win32_begin_frame(), r_gl_win32_end_frame())
-          {
-            DefereLoop(ui_begin_build(), ui_end_build())
-            {
-              // TODO: Test 
-              ui_push_background_color(C_LIGHT_GREEN);
-
-              ui_begin_box(UI_SizePercentOfParent(1), UI_SizeChildrenSum(), Axis2_x, "Name row", UI_box_flag__has_backgound, "");
-              {
-                UI_BackgroundColor(C_BLUE)
-                {
-                  ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Box 1", UI_box_flag__has_backgound, "");
-                  {
-                    ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "Icon text", UI_box_flag__has_text, "Icon");
-                    {}
-                    ui_end_box();
-                  
-                    ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "Title text", UI_box_flag__has_text, "Title");
-                    {}
-                    ui_end_box();
-                  }
-                  ui_end_box();
-                }
-                
-                // Spacer here to stretch to the sides of the screen
-                ui_begin_box(UI_SizeFitTheParent(), UI_SizePx(0), Axis2_x, "Spacer 1 key", UI_box_flag__NONE, "");
-                {}
-                ui_end_box();
-
-                UI_BackgroundColor(C_RED)
-                {
-                  UI_ChildGap(50)
-                  {
-                    ui_begin_box(UI_SizeChildrenSum(), UI_SizeChildrenSum(), Axis2_x, "Box 1", UI_box_flag__has_backgound, "");
-                    {
-                      ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "CPU text", UI_box_flag__has_text, "CPU");
-                      {}
-                      ui_end_box();
-                      
-                      ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "GPU text", UI_box_flag__has_text, "GPU");
-                      {}
-                      ui_end_box();
-                      
-                      ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, "RAM text", UI_box_flag__has_text, "RAM");
-                      {}
-                      ui_end_box();
-                    }
-                    ui_end_box();
-                  }
-                  ui_pop_child_gap();
-                }
-
-              }
-              ui_end_box();
-
-              // ui_begin_box(UI_SizePx(500), UI_SizePx(500), Axis2_y, "Main key", UI_box_flag__has_backgound, "");
-              // {
-              //   local B32 is_menu_open = false;
-              //   if (ui_get_inputs().is_clicked)
-              //   {
-              //     ToggleBool(is_menu_open);
-              //   }
-                
-              //   if (is_menu_open)
-              //   {
-              //     ui_begin_box(UI_SizeText(), UI_SizeText(), Axis2_x, UI_Key(__LINE__), UI_box_flag__has_text, "Text");
-              //     {}
-              //     ui_end_box();
-              //   }
-              // }
-              // ui_end_box();
-            }
-            ui_draw_ui();
-          }
-
-        }
-        
       }
     }
   }
-} 
-
-#endif
+}
 
 #define SCREEN_SHOT_DEMO 0
 #if SCREEN_SHOT_DEMO
@@ -353,7 +330,7 @@ void EntryPoint()
 
 
 
-
+#endif 
 
 
 

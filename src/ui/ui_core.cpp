@@ -8,70 +8,71 @@
 ///////////////////////////////////////////////////////////
 // Damian: Extra accesors
 //
-UI_size ui_size_make(UI_size_kind kind, F32 value, F32 strictness)
+UI_size ui_size_make(UI_size_kind kind, F32 value)
 {
   UI_size result = {};
   result.kind = kind;
   result.value = value;
-  result.strictness = strictness;
   return result;
 }
 
-UI_size ui_size_px_make(F32 value, F32 strictness)
+UI_size ui_size_px_make(F32 value)
 {
-  UI_size result = ui_size_make(UI_size_kind_px, value, strictness);
+  UI_size result = ui_size_make(UI_size_kind_px, value);
   return result;
 }
 
 UI_size ui_size_child_sum_make()
 {
-  UI_size result = ui_size_make(UI_size_kind_children_sum, Null, Null);
+  UI_size result = ui_size_make(UI_size_kind_children_sum, Null);
   return result;
 }
 
-UI_size ui_size_text_make(F32 strictness)
+UI_size ui_size_text_make()
 {
-  UI_size result = ui_size_make(UI_size_kind_text, Null, strictness);
+  UI_size result = ui_size_make(UI_size_kind_text, Null);
   return result;
 }
 
 UI_size ui_size_percent_of_parent_make(F32 p)
 {
-  UI_size result = ui_size_make(UI_size_kind_percent_of_parent, p, Null);
+  UI_size result = ui_size_make(UI_size_kind_percent_of_parent, p);
   return result;
 }
 
 UI_size ui_size_fit_the_parent_make(F32 grow_value)
 {
-  UI_size result = ui_size_make(UI_size_kind_fit_the_parent, grow_value, Null);
+  UI_size result = ui_size_make(UI_size_kind_fit_the_parent, grow_value);
   return result;
 }
 
-Arena* ui_current_build_arena()
-{
-  Arena* arena = g_ui_state->ui_tree_build_arenas[g_ui_state->current_arena_index]; 
-  return arena;
-}
-
-Arena* ui_prev_build_arena()
-{
-  U32 prev_arena_index = (g_ui_state->current_arena_index == 0 ? 1 : 0);
-  Arena* arena = g_ui_state->ui_tree_build_arenas[prev_arena_index]; 
-  return arena;
-}
-
-/*
-
-*/
+///////////////////////////////////////////////////////////
+// Damian: Key stuff
+//
 // Str8 ui_key_from_str8(Str8 str)
 // {
-  
+//   Str8 key = str;
+//   return key;
 // }
 
-// Str8 ui_key_from_cstr(const char* cstr)
-// {
-  
-// }
+Str8 ui_label_from_key(Str8 key)
+{
+  U64 start_index = {};
+  Str8 label = key;
+  if (str8_does_contain_substring(key, Str8FromClit("##"), &start_index))
+  {
+    // Get the prefix substring to use as a label
+    label = str8_substring_index(key, 0, start_index);
+  }
+  return label;
+}
+
+// Damian: This is here cause i need null keys, but if need to change then, i can just do it here for now
+Str8 ui_null_key()
+{
+  Str8 key = str8_empty();
+  return key;
+}
 
 ///////////////////////////////////////////////////////////
 // Damian: State
@@ -87,6 +88,18 @@ void ui_state_init(Win32_window* window, Font_info* font_info)
   g_ui_state->current_arena_index = 0;
   g_ui_state->ui_tree_build_arenas[0] = arena_alloc(Megabytes_U64(64), "UI tree build arena 1");
   g_ui_state->ui_tree_build_arenas[1] = arena_alloc(Megabytes_U64(64), "UI tree build arena 2");
+
+  // Damian: Testing some runtime protection against null pointers 
+  g_ui_box_sentinel_null = ArenaPush(g_ui_state->perm_state_arena, UI_Box);
+  g_ui_box_sentinel_null->parent = g_ui_box_sentinel_null;
+  g_ui_box_sentinel_null->first  = g_ui_box_sentinel_null;
+  g_ui_box_sentinel_null->last   = g_ui_box_sentinel_null;
+  g_ui_box_sentinel_null->next   = g_ui_box_sentinel_null;
+  g_ui_box_sentinel_null->prev   = g_ui_box_sentinel_null;
+
+  g_ui_state->root            = g_ui_box_sentinel_null;
+  g_ui_state->current_parent  = g_ui_box_sentinel_null; 
+  g_ui_state->prev_frame_root = g_ui_box_sentinel_null;
 }
 
 void ui_state_release()
@@ -95,37 +108,47 @@ void ui_state_release()
   arena_release(g_ui_state->ui_tree_build_arenas[1]);
   arena_release(g_ui_state->perm_state_arena);
   g_ui_state = 0;
+  g_ui_box_sentinel_null = 0;
+}
+
+///////////////////////////////////////////////////////////
+// Damian: Getters
+//
+Arena* ui_current_build_arena()
+{
+  Arena* arena = g_ui_state->ui_tree_build_arenas[g_ui_state->current_arena_index]; 
+  return arena;
+}
+
+Arena* ui_prev_build_arena()
+{
+  U32 prev_arena_index = (g_ui_state->current_arena_index == 0 ? 1 : 0);
+  Arena* arena = g_ui_state->ui_tree_build_arenas[prev_arena_index]; 
+  return arena;
 }
 
 ///////////////////////////////////////////////////////////
 // Damian: Debug Input stuff
 //
-UI_Box* ui_get_box_with_key_opt(UI_Box* root, Str8 key)
+UI_Box* ui_get_box_from_key(UI_Box* root, Str8 key)
 {
   UI_Box* box = 0;
-
-  if (str8_match(key, root->key, Str8_match_flag_NONE))
+  if (str8_match(key, root->key))
   {
     box = root;
   }
-  else {
+  else 
+  {
     for (UI_Box* child = root->first; child != 0; child = child->next)
     {
-      box = ui_get_box_with_key_opt(child, key);
+      box = ui_box_from_key__sentinel_null(child, key);
       if (box) {
         break;
       }
     }
   }
-
   return box;
 }
-
-UI_Box* ui_get_box()
-{
-  return g_ui_state->current_parent;
-}
-
 
 B32 test_inputs_for_box(UI_Box* box)
 {
@@ -148,18 +171,13 @@ B32 test_inputs_for_box(UI_Box* box)
 
 B32 ui_is_clicked()
 {
-  // There might not have been a tree to present the user with yet
-  if (g_ui_state->prev_frame_root == 0) 
-  {
-    return false;
-  }
-
   UI_Box* prev_frame_ui_tree_root = g_ui_state->prev_frame_root;
   UI_Box* current_box = g_ui_state->current_parent;
-  UI_Box* found_box = ui_get_box_with_key_opt(prev_frame_ui_tree_root, current_box->key);
+  UI_Box* found_box = ui_box_from_key__sentinel_null(prev_frame_ui_tree_root, current_box->key);
   
+  // TODO: See if i really need this check here, i guess it doesnt make it worse.
   B32 is_clicked = false;
-  if (found_box)
+  if (found_box != g_ui_box_sentinel_null)
   {
     is_clicked = test_inputs_for_box(found_box);
   }
@@ -169,7 +187,7 @@ B32 ui_is_clicked()
 ///////////////////////////////////////////////////////////
 // Damian: UI element creation stuff 
 //
-UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text) 
+UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags) 
 {
   Arena* arena = ui_current_build_arena();
   UI_Box* box = ArenaPush(ui_current_build_arena(), UI_Box);
@@ -189,7 +207,7 @@ UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text)
   }
   if (flags & UI_box_flag__has_text)
   {
-    box->text = str8_from_str8_alloc(arena, text); 
+    box->text = str8_from_str8_alloc(arena, ui_label_from_key(key)); 
     box->text_color = ui_current_text_color(); 
   }
   if (flags & UI_box_flag__draw_padding)
@@ -204,14 +222,6 @@ UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text)
 
   // TODO: I dont like the different nature for stuff like draw_padding whitch we supposed to not store as a bool bug get from flags
 
-  return box;
-}
-
-UI_Box* ui_allocated_and_set_up_box(const char* key, UI_box_flags flags, Str8 text)
-{
-  Scratch scratch = get_scratch();  
-  UI_Box* box = ui_allocated_and_set_up_box(str8_from_cstr(key), flags, text);
-  end_scratch(&scratch);
   return box;
 }
 
@@ -235,13 +245,13 @@ void ui_begin_build()
   #undef UI_STACK_DATA
 
   UI_box_flags root_flags = UI_box_flag__has_backgound;
-  UI_Box* new_root = ui_allocated_and_set_up_box("ROOT_KEY_FOR_UI", root_flags, str8_empty());
+  UI_Box* new_root = ui_allocated_and_set_up_box(Str8FromClit("ROOT_KEY_FOR_UI"), root_flags);
   g_ui_state->root = new_root;
   g_ui_state->current_parent = new_root;
 
   // TODO: This hardcoded here has to go
-  new_root->semantic_size[Axis2_x].value = ui_rect.width;
-  new_root->semantic_size[Axis2_y].value = ui_rect.height;
+  new_root->semantic_size[Axis2_x] = ui_size_px_make(ui_rect.width);
+  new_root->semantic_size[Axis2_y] = ui_size_px_make(ui_rect.height);
 }
 
 void ui_end_build()
@@ -251,9 +261,9 @@ void ui_end_build()
 
 #define UI_Key(value) #value
 
-UI_Box* ui_begin_box(Str8 key, UI_box_flags flags, Str8 text) 
+UI_Box* ui_begin_box(Str8 key, UI_box_flags flags) 
 {
-  UI_Box* new_box = ui_allocated_and_set_up_box(key, flags, text);
+  UI_Box* new_box = ui_allocated_and_set_up_box(key, flags);
   DllPushBack(g_ui_state->current_parent, new_box);
   g_ui_state->current_parent->children_count += 1;
 
@@ -322,6 +332,8 @@ void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
         ui_sizing_for_child_dependant_elements(child, axis);
       }
 
+      // TODO: Use the generalised functions here for clarity
+
       F32 total_size_on_axis = 0.0f;
       for (UI_Box* child = root->first; child != 0; child = child->next)
       {
@@ -350,96 +362,152 @@ void ui_sizing_for_child_dependant_elements(UI_Box* root, Axis2 axis)
 
 // ------------
 
-F32 ui_formal_total_space_from_box(UI_Box* box, Axis2 axis)
-{
-  F32 space = box->computed_sizes[axis];
-  return space;
-}
+// F32 ui_formal_total_space_from_box(UI_Box* box, Axis2 axis)
+// {
+//   F32 space = box->computed_sizes[axis];
+//   return space;
+// }
 
-F32 ui_real_total_space_from_box(UI_Box* box, Axis2 axis)
-{
-  F32 space = 0.0f;
+// F32 ui_real_total_space_from_box(UI_Box* box, Axis2 axis)
+// {
+//   F32 space = 0.0f;
 
-  // Getting space taken by children for that axis 
-  if (box->layout_axis == axis)
-  {
-    for (UI_Box* child = box->first; child != 0; child = child->next)
-    {
-      space += child->computed_sizes[axis];
-    }
-  }
-  else
-  {
-    for (UI_Box* child = box->first; child != 0; child = child->next)
-    {
-      space = Max(space, child->computed_sizes[axis]); 
-    }
-  }
+//   // Getting space taken by children for that axis 
+//   if (box->layout_axis == axis)
+//   {
+//     for (UI_Box* child = box->first; child != 0; child = child->next)
+//     {
+//       space += child->computed_sizes[axis];
+//     }
+//   }
+//   else
+//   {
+//     for (UI_Box* child = box->first; child != 0; child = child->next)
+//     {
+//       space = Max(space, child->computed_sizes[axis]); 
+//     }
+//   }
   
-  // Accounting for padding and child gap
-  if (box->semantic_size[axis].kind == UI_size_kind_children_sum)
-  {
-    if (box->children_count > 0)
-    {
-      space += 2 * box->padding;
-    }
-    if (box->layout_axis == axis && box->children_count > 1)
-    {
-      space += (box->children_count - 1) * box->child_gap;
-    }
-  }
-  else 
-  {
-    space += 2 * box->padding;
-    if (box->layout_axis == axis && box->children_count > 1)
-    {
-      space += (box->children_count - 1) * box->child_gap;
-    }
-  }
+//   // Accounting for padding and child gap
+//   if (box->semantic_size[axis].kind == UI_size_kind_children_sum)
+//   {
+//     if (box->children_count > 0)
+//     {
+//       space += 2 * box->padding;
+//     }
+//     if (box->layout_axis == axis && box->children_count > 1)
+//     {
+//       space += (box->children_count - 1) * box->child_gap;
+//     }
+//   }
+//   else 
+//   {
+//     space += 2 * box->padding;
+//     if (box->layout_axis == axis && box->children_count > 1)
+//     {
+//       space += (box->children_count - 1) * box->child_gap;
+//     }
+//   }
  
+//   return space;
+// }
+
+// // ------------
+
+// F32 ui_paddin_and_gaps_space_from_box(UI_Box* box, Axis2 axis)
+// {
+//   F32 space = 0.0f;
+//   if (box->semantic_size[axis].kind == UI_size_kind_children_sum)
+//   {
+//     if (box->children_count > 0) {
+//       space += 2 * box->padding;
+//     }
+//   }
+//   else
+//   {
+//     space += 2 * box->padding;
+//   }
+//   if (box->layout_axis == axis && box->children_count > 1) {
+//     space += (box->children_count - 1) * box->padding;
+//   }
+//   return space;
+// }
+
+// ------------
+
+// F32 ui_formal_child_space_from_box(UI_Box* box, Axis2 axis)
+// {
+//   F32 formal_total_space = ui_formal_total_space_from_box(box, axis);
+//   F32 padding_and_gaps = ui_paddin_and_gaps_space_from_box(box, axis); 
+//   F32 formal_child_space = formal_total_space - padding_and_gaps; 
+//   return formal_child_space;
+// }
+
+// F32 ui_real_child_space_from_box(UI_Box* box, Axis2 axis)
+// {
+//   F32 real_total_space = ui_real_total_space_from_box(box, axis);
+//   F32 padding_and_gaps = ui_paddin_and_gaps_space_from_box(box, axis); 
+//   F32 real_child_space = real_total_space - padding_and_gaps; 
+//   return real_child_space;
+// }
+
+// ------------
+
+// Total space for an element
+// Total child space for an element
+// Used child space for an element
+// 
+
+// F32 ui_space_for_box(UI_Box* root, Axis2 axis)
+// {
+//   // TODO: Might also assert here just to make sure that i never use this for box that has to size yet
+//   return root->computed_sizes[axis];
+// }
+
+// F32 ui_padding_gap_space_for_box(UI_Box* root, Axis2 axis)
+// {
+//   F32 space = 0.0f;
+//   space += root->padding * 2;
+//   if (root->layout_axis == axis && root->children_count > 1)
+//   {
+//     space += root->child_gap * (root->children_count - 1);
+//   }
+//   return space;
+// }
+
+// F32 ui_child_space_for_box(UI_Box* root, Axis2 axis)
+// {
+//   F32 child_space = ui_space_for_box(root, axis) - ui_padding_gap_space_for_box(root, axis);
+//   return child_space;
+// }
+
+// F32 ui_used_child_space_for_box(UI_Box* root, Axis2 axis)
+// {
+//   F32 used_child_space = 0.0f;
+//   for (UI_Box* child = root->first; child != 0; child = child->next)
+//   {
+//     if (root->layout_axis)
+//     {
+//       used_child_space += child->computed_sizes[axis];
+//     }
+//     else
+//     {
+//       used_child_space
+//     }
+//   }
+//   return used_child_space;
+// }
+
+// TODO: Keeping the padding and gap calculation might be great, but all the might not be needed
+F32 ui_get_box_padding_gap_space(UI_Box* root, Axis2 axis)
+{
+  F32 space = 2 * root->padding;
+  if (root->layout_axis == axis && root->children_count > 1)
+  {
+    space += (root->children_count - 1) * root->child_gap;
+  }
   return space;
 }
-
-// ------------
-
-F32 ui_paddin_and_gaps_space_from_box(UI_Box* box, Axis2 axis)
-{
-  F32 space = 0.0f;
-  if (box->semantic_size[axis].kind == UI_size_kind_children_sum)
-  {
-    if (box->children_count > 0) {
-      space += 2 * box->padding;
-    }
-  }
-  else
-  {
-    space += 2 * box->padding;
-  }
-  if (box->layout_axis == axis && box->children_count > 1) {
-    space += (box->children_count - 1) * box->padding;
-  }
-  return space;
-}
-
-// ------------
-
-F32 ui_formal_child_space_from_box(UI_Box* box, Axis2 axis)
-{
-  F32 formal_total_space = ui_formal_total_space_from_box(box, axis);
-  F32 padding_and_gaps = ui_paddin_and_gaps_space_from_box(box, axis); 
-  F32 formal_child_space = formal_total_space - padding_and_gaps; 
-  return formal_child_space;
-}
-
-F32 ui_real_child_space_from_box(UI_Box* box, Axis2 axis)
-{
-  F32 real_total_space = ui_real_total_space_from_box(box, axis);
-  F32 padding_and_gaps = ui_paddin_and_gaps_space_from_box(box, axis); 
-  F32 real_child_space = real_total_space - padding_and_gaps; 
-  return real_child_space;
-}
-
-// ------------
 
 void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
 {
@@ -472,62 +540,63 @@ void ui_sizing_for_parent_dependant_elements(UI_Box* root, Axis2 axis)
       // Get the size left in the parent to fit into
       // Get the number of the children that might be stretched
       // Each 1 of then has to get stretched to the 100%/n of the parent space that is left to be filled in
-
-      F32 total_possible_space_for_children = ui_formal_child_space_from_box(root->parent, axis);
-      F32 total_used_space_for_children = ui_real_child_space_from_box(root->parent, axis);
+      UI_Box* parent = root->parent;
+      F32 total_possible_space_for_children = parent->computed_sizes[axis] - ui_get_box_padding_gap_space(parent, axis);
+      F32 total_used_space_for_children = 0.0f;
+      for (UI_Box* child = parent->first; child != 0; child = child->next)
+      {
+        if (parent->layout_axis == axis)
+        {
+          total_used_space_for_children += child->computed_sizes[axis];
+        }
+        else { break; } // Here we dont do anything, since in the non align axis we dont have space taken 
+      }
       F32 space_left = total_possible_space_for_children - total_used_space_for_children;
+
       if (space_left > 0.0f)
       {
-        U32 n_growers = 0;
-        F32 total_growing_k = 0.0f;
-        for (UI_Box* child = root->parent->first; child != 0; child = child->next)
+        root->computed_sizes[axis] = 0; 
+        // TODO: This was a bug, since i add stuff and no assign. See if it happend again.
+        
+        if (parent->layout_axis == axis) // Here we have to get the space left
         {
-          if (child->semantic_size[axis].kind == UI_size_kind_fit_the_parent) {
-            n_growers += 1;
-            total_growing_k += child->semantic_size[axis].value;
-          }
-        }
-
-        if (n_growers > 0)
-        {
-          F32 space_to_grow = space_left;
-          if (root->parent->layout_axis == axis)
+          F32 total_growing_k = 0.0f;
+          U32 n_growers = 0;
+          for (UI_Box* child = parent->first; child != 0; child = child->next)
           {
-            F32 root_grow_ration = root->semantic_size[axis].value / total_growing_k;
-            space_to_grow = space_left * root_grow_ration;
+            if (child->semantic_size[axis].kind == UI_size_kind_fit_the_parent) {
+              n_growers += 1;
+              total_growing_k += child->semantic_size[axis].value;
+            }
+          }
+          Assert(n_growers > 0);
+
+          // We have to adjust all the fitting children here, since if we do it recursively, then will have less space left but same %,
+          // so the end size will be smaller that was expected
+          for (UI_Box* child = parent->first; child != 0; child = child->next)
+          {
+            F32 p_of_growers = (child->semantic_size[axis].value) / total_growing_k;
+            F32 space_to_grow = p_of_growers * space_left;
+            child->computed_sizes[axis] += space_to_grow;
           }
 
-          root->computed_sizes[axis] += space_to_grow;
+        }
+        else // Here we just set to usable sapce since this is not the layout axis 
+        {
+          // TODO: But here we split the codepath, its not great
+          root->computed_sizes[axis] += space_left;
         }
       }
-
-      // UI_Box* parent = root->parent;
-      // F32 total_size = parent->computed_sizes[axis];
-      // F32 size_used = 0.0f;
-
-      // if (parent->layout_axis == axis) // Here we stretch based on the space left
-      // { 
-      //   for (UI_Box* child = parent->first; child != 0; child = child->next)
-      //   {
-      //     size_used += child->computed_sizes[axis];
-      //   }
-      //   size_used += 2 * parent->padding;
-      //   if (parent->children_count > 0)
-      //   {
-      //     size_used += (parent->children_count - 1) * parent->child_gap;
-      //   }
-      // }
-      // else // Here we just get the other size for the parent, since that no where he lays out elements
-      // { 
-      //   size_used += 2 * parent->padding;
-      // }
-      // root->computed_sizes[axis] = total_size - size_used;
-      // root->computed_sizes[axis] = Max(0.0f, root->computed_sizes[axis]); // If its overflowing, then we just set the fit parent to 0, since it cant fit anymore
   
-      // for (UI_Box* child = root->first; child != 0; child = child->next)
-      // {
-      //   ui_sizing_for_parent_dependant_elements(child, axis);
-      // }
+      if (str8_match(Str8FromClit("Spacer test"), root->key))
+      {
+        int x = 0;
+      }
+
+      for (UI_Box* child = root->first; child != 0; child = child->next)
+      {
+        ui_sizing_for_parent_dependant_elements(child, axis);
+      }
     } break;
   }
 
@@ -589,8 +658,8 @@ void ui_final_pos_pass(UI_Box* root)
 //
 void ui_draw_ui_helper(UI_Box* root)
 { 
-  Scratch scratch = get_scratch();
-  if (str8_match(root->key, Str8FromClit("Clay like box"), Str8_match_flag_NONE))
+  Scratch scratch = get_scratch(0, 0);
+  if (str8_match(root->key, Str8FromClit("Clay like box")))
   {
     // DebugStopHere();
   }
@@ -616,15 +685,15 @@ void ui_draw_ui_helper(UI_Box* root)
       root->computed_final_rect.x,
       root->computed_final_rect.y,
       root->text_color);
-    
-    #if 0
+  }
+
+  if (root->flags & UI_box_flag__draw_text_box)
+  {
     test_draw_text_lines(
-      g_ui_state->font_info, 
-      g_ui_state->font_texture, 
-      root->text, 
+      g_ui_state->font_info,
+      root->text,  
       root->computed_final_rect.x, 
       root->computed_final_rect.y);
-    #endif
   }
 
   if (root->flags & UI_box_flag__has_texture)
@@ -670,7 +739,7 @@ void ui_draw_ui_helper(UI_Box* root)
         {
           r.x      = root_pos.values[Axis2_x] + padding + children_total_size_on_align_axis_yet + ((child_index - 1) * child_gap);
           r.y      = root_pos.values[Axis2_y] + padding;
-          r.width  = ui_current_child_gap();
+          r.width  = child_gap;
           r.height = root_dims.values[Axis2_y] - (2 * padding);
         }
         else if (root->layout_axis == Axis2_y)
@@ -698,21 +767,128 @@ void ui_draw_ui_helper(UI_Box* root)
 
 
 // TODO: Move this to a better place
+#if 1
 void ui_fix_overflow_pass(UI_Box* root, Axis2 axis)
 {
-  F32 formal_child_space = ui_formal_child_space_from_box(root, axis);
-  F32 real_child_space = ui_real_child_space_from_box(root, axis);
-  F32 overflow = real_child_space - formal_child_space;
-  if (overflow > 0.0f)
+  // If we have an element with px or something like this, we shoud not be changing its size unless
+  // it is explicitly specifies. Therefore we either do the rjf like thing with the strictness,
+  // or web like thing with min size. 
+  // But we still might have a text element inside another element and there is an overflow,
+  // then we might have a flag then will just colapse the text in the same line using ".." notation
+
+  // --> Find if there is an overflow
+  // --> Find if there is a text element in the child list of root
+  // --> If yes, then make the child element be small, for now just 5 characters and 2 dots at the end
+
+  // We have text eleemnts that might be collapsed, this means we have to get a list of those that can get collapsed and then just collapse them until we have no overflow
+  // Get the longest text, and collapse it till its like the second longest, then do it with both of them.
+  // This way longer strings get collapsed first. 
+
+  // Algo:
+  // - Create a list of textual elements that might get shrinked
+  // - Sort them from longest to shortest
+  // - Store an index that separates the alredy shorted once from other once
+  // - Then just use the index to go over the list and shorten the strings characted at a time, until the overflow is gone
+  // - Use the index to compare the last shorting string to the not yet tounded string, if they are the same size, then start shorting the index+1 string as well
+
+
+  for (UI_Box* child = root->first; child != 0; child = child->next)
   {
+    if (str8_match(Str8FromClit("Process name here"), child->key))
+    {
+      int x = 0;
+    }
+  }
+
+  F32 extra_space = ui_get_box_padding_gap_space(root, axis);
+  F32 legal_child_space = root->computed_sizes[axis] - extra_space;
+  F32 child_size_sum = 0.0f;
+  // Damian: For now just the align axis overflow
+  for (UI_Box* child = root->first; child != 0; child = child->next)
+  {
+    child_size_sum += child->computed_sizes[axis];
+  }
+
+  if (child_size_sum > legal_child_space)
+  {
+    U64 count_of_shrinkable = 0;
     for (UI_Box* child = root->first; child != 0; child = child->next)
     {
-      F32 strictness = child->semantic_size[axis].strictness;
-      F32 p_to_remove = 1.0f - strictness;
-      child->computed_sizes[axis] -= overflow * p_to_remove; 
+      if (child->flags | UI_box_flag__has_text && child->flags | UI_box_flag__text_colapse)
+      {
+        count_of_shrinkable += 1;
+      }
     }
 
-    // printf("Encountered an overflow at key: %s \n", str8_temp_from_str8(root->key).data);
+    if (count_of_shrinkable > 0)
+    {
+      auto shrinking_box_compare = [](void const* e1, void const* e2) {
+        UI_Box* b1 = (UI_Box*)e1;
+        UI_Box* b2 = (UI_Box*)e2; 
+
+        int result = 0;
+        if (b1->text.count > b2->text.count) {
+          result = 1;
+        } else if (b1->text.count == b2->text.count) {
+          result = 0;
+        } else {
+          result = -1;
+        }
+        return result;
+      };
+
+      UI_Box* shrinkable_boxes_arr = ArenaPushArr(ui_current_build_arena(), UI_Box, count_of_shrinkable);
+      qsort(shrinkable_boxes_arr, count_of_shrinkable, sizeof(UI_Box), shrinking_box_compare);
+      
+      U64 sep_index = 0;
+      for (U64 i = 1; i < count_of_shrinkable - 1; i += 1)
+      {
+        if (shrinkable_boxes_arr[i].text.count == shrinkable_boxes_arr[i + 1].text.count)
+        {
+          sep_index += 1;
+        }
+      }
+
+      // Now we have the index that points to the one past the last element with the same size as the ones before it 
+      // Now just iterate within the range based on the index value and shrink until we have to add the next element to the shrinking list
+
+      for (;;)
+      {
+        F32 sum = 0.0f;
+        for (UI_Box* child = root->first; child != 0; child = child->next)
+        {
+          sum += child->computed_sizes[axis];
+        } 
+        if (sum <= legal_child_space)
+        {
+          break;
+        }
+        else
+        {
+          if ((shrinkable_boxes_arr + sep_index - 1)->text.count == (shrinkable_boxes_arr + sep_index)->text.count)
+          {
+            sep_index += 1;
+          }
+
+          for (U64 i = 0; i < sep_index; i += 1)
+          {
+            UI_Box* box = shrinkable_boxes_arr + i;
+            Assert(box->text.count > 3); // TODO: remove this shit from here
+            Str8 copy = data_buffer_make(ui_current_build_arena(), box->text.count - 1);
+            MemCopy(copy.data, box->text.data, copy.count - 2);
+            MemSet(copy.data + copy.count - 2, '.', 2);
+            MemCopy(box->text.data, copy.data, copy.count);
+            box->text.count = copy.count;
+            box->computed_sizes[axis] = font_measure_text(g_ui_state->font_info, box->text).x;
+            Assert(axis == Axis2_x);
+          
+            // Shrink
+
+            // Check to add the new element to shrinking list
+          }
+        }
+      }
+    }
   }
 
   // Recurse
@@ -721,12 +897,12 @@ void ui_fix_overflow_pass(UI_Box* root, Axis2 axis)
     ui_fix_overflow_pass(child, axis);
   }
 }
+#endif
 
 void ui_draw_ui()
 {
   ui_sizing_for_fixed_sized_elements(g_ui_state->root, Axis2_x);
   ui_sizing_for_fixed_sized_elements(g_ui_state->root, Axis2_y);
-
   ui_sizing_for_child_dependant_elements(g_ui_state->root, Axis2_x);
   ui_sizing_for_child_dependant_elements(g_ui_state->root, Axis2_y);
 
@@ -734,12 +910,14 @@ void ui_draw_ui()
   ui_sizing_for_parent_dependant_elements(g_ui_state->root, Axis2_y);
 
   // The second pass to acound for some possible child element expansions
-  ui_sizing_for_child_dependant_elements(g_ui_state->root, Axis2_x);
-  ui_sizing_for_child_dependant_elements(g_ui_state->root, Axis2_y);
+  // ui_sizing_for_child_dependant_elements(g_ui_state->root, Axis2_x);
+  // ui_sizing_for_child_dependant_elements(g_ui_state->root, Axis2_y);
 
   // THIS IS NEW
   ui_fix_overflow_pass(g_ui_state->root, Axis2_x);
   ui_fix_overflow_pass(g_ui_state->root, Axis2_y);
+  // ui_sizing_for_parent_dependant_elements(g_ui_state->root, Axis2_x);
+  // ui_sizing_for_parent_dependant_elements(g_ui_state->root, Axis2_y);
 
   ui_layout_pass(g_ui_state->root, Axis2_x);
   ui_layout_pass(g_ui_state->root, Axis2_y);
@@ -758,49 +936,46 @@ void ui_equip_font_texture(Texture2D font_texture)
 ///////////////////////////////////////////////////////////
 // Damian: Inputs
 //
-UI_Box* ui_box_from_key_opt(UI_Box* root, Str8 key)
+UI_Box* ui_box_from_key__sentinel_null(UI_Box* root, Str8 key)
 {
-  UI_Box* result = 0;
-  if (str8_match(root->key, key, Str8_match_flag_NONE))
+  UI_Box* result = g_ui_box_sentinel_null;
+  if (str8_match(root->key, key))
   {
     result = root;
   }
-
-  if (!result)
+  if (result == g_ui_box_sentinel_null)
   {
     for (UI_Box* child = root->first; child != 0; child = child->next)
     {
-      result = ui_box_from_key_opt(child, key);
+      result = ui_box_from_key__sentinel_null(child, key);
       if (result)
       {
         break;
       }
     }
   }
-
   return result;
 }
 
-/* NOTES:
-  Kind of inputs i need:
-  - Final mouse pos
-  -
-*/
-
-UI_Inputs ui_get_inputs()
+UI_Inputs ui_get_inputs_from_prev_build()
 {
   UI_Inputs inputs = {};
 
   UI_Box* current = g_ui_state->current_parent;
   UI_Box* prev_root = g_ui_state->prev_frame_root;
-  
-  if (prev_root)
   {
-    UI_Box* prev_current = ui_box_from_key_opt(prev_root, current->key);
+    Assert(current, "This is alway present after when the state is present");
+  }
+
+  // TODO: See if i still want to check this, i guess it doesnt make it worse
+  if (prev_root != g_ui_box_sentinel_null)
+  {
+    UI_Box* prev_current = ui_box_from_key__sentinel_null(prev_root, current->key);
     UI_Inputs prev_inputs = prev_current->inputs; 
     inputs = prev_inputs;
 
-    if (prev_current)
+    // TODO: Test what happends if i forget to check for sentinel here
+    if (prev_current != g_ui_box_sentinel_null)
     {
       Rect rect = prev_current->computed_final_rect;
 
@@ -866,9 +1041,6 @@ UI_Inputs ui_get_inputs()
 
   }
 
-  // local U64 frame_counter = 0;
-  // printf("Frame: %lld --> %s \n", frame_counter++, (inputs.is_pressed_left ? "Pressed" : "Up"));
-
   return inputs;
 }
 
@@ -901,19 +1073,19 @@ void ui_draw_child_gap_color(Color gap_color)
 //   box->has_max_size[axis] = true;
 // }
 
-UI_Inputs ui_box_make(Str8 key, UI_box_flags flags, Str8 text)
+UI_Inputs ui_box_make(Str8 key, UI_box_flags flags)
 {
   // TODO: See maybe ui_get_inputs not using the hidden element but expecting a parameter is better
   UI_Inputs inputs = {};
-  UI_Box* box = ui_begin_box(key, flags, text);
+  UI_Box* box = ui_begin_box(key, flags);
   {
-    inputs = ui_get_inputs();
+    inputs = ui_get_inputs_from_prev_build();
   }
   ui_end_box();
   return inputs;
 }
 
-#define UI_BoxLoop(key, flags, text) DefereLoop(ui_begin_box(key, flags, text), ui_end_box())
+#define UI_BoxLoop(key, flags) DefereLoop(ui_begin_box(key, flags), ui_end_box())
 
 ///////////////////////////////////////////////////////////
 // Damian: Stacks

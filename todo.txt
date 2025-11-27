@@ -1,0 +1,41 @@
+This file was created on 26th of November 2025. (I was watching Allen at this moment "https://www.youtube.com/watch?v=OWFDY4yS4uA&t=330s")
+
+-- Memory
+[] Add support for OS specific allocations (VAlloc, VRelease, VCommit). 
+   Think about wether you want to have then the memory managment be a part of the os.
+   You definately dont want to have to include os layer in the base layer where the arena shoud be. 
+   Maybe then some macro stuff that is specified per os that is then using the arena from the base layer as well. 
+   --
+[] Try to see how the base layer arena can be made a non concrete implemention.
+   Maybe make a layer (json parser for example) that is like stb, it lets the caller specify the types but they have to conform to an interface.
+   This will allow you to see how malloc/free like api can be converted to an arena like api that then i used inside the lib. 
+   See if this has to be a separate implementation then or if it has any effect on the base layer. 
+   Base is the root of all the other things, so we dont want to make it bigger unless we need to.
+   --
+[] Implement cashe alignment for arena allocations (Ideally also test if it doesnt anything compared to the non aligned version)
+   --
+[] Implement a scratch space that can deal with conficts. It also has to be then able to deal with failure to fix those conflicts.
+   One way is to have a fuct pointer or just a macro that then is used for arenas at specific ocasions, like when the arena is about to crash.
+   We then might be able to control it, without having to make the signle code path in the real code sight bigger.
+   What are some other possible ways of dealing with these things?
+
+-- Other
+[] 
+
+-- OS
+[] 
+
+-- Renderer
+[]
+
+
+
+
+
+
+
+
+
+
+
+

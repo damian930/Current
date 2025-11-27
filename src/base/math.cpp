@@ -589,6 +589,15 @@ Color color_set_a(Color color, F32 new_a)
   return result;
 }
 
+Color color_normalise(F32 r, F32 g, F32 b, F32 a)
+{
+  Color result = vec4_f32(r, g, b, a);
+  result.r /= 255.0f;
+  result.g /= 255.0f;
+  result.b /= 255.0f;
+  result.a /= 255.0f;
+  return result;
+}
 
 
 

@@ -171,13 +171,13 @@ LRESULT CALLBACK WndProc(HWND window_handle, UINT message, WPARAM w_param, LPARA
 
     case WM_SIZE:
     {
-      Scratch scratch = get_scratch();
+      Scratch scratch = get_scratch(0, 0);
       end_scratch(&scratch);
     } break;
 
     case WM_MOVE:
     {
-      Scratch scratch = get_scratch();
+      Scratch scratch = get_scratch(0, 0);
       end_scratch(&scratch);
     } break;
 

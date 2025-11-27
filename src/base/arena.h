@@ -4,6 +4,7 @@
 #include "core.h"
 #include "string.h"
 
+// TODO: Would it be a good idea to add some extra space to the arena just in case it faild to then be able to recover, cause we might need some mem still 
 struct Arena {
   U8* base_p;
   

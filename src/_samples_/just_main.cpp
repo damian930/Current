@@ -71,10 +71,6 @@ void EntryPoint()
   //   str8_printf("I --> #U32:<3 <-- \n", i);
   // }
 
-  // TODO:
-  // {value:>10} - right align in width 10
-  // {value:<10} - left align in width 10
-  // {value:^10} - center align in width 10
 
 }
 

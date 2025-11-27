@@ -2,6 +2,7 @@
 #define BASE_MATH_H
 
 #include "base/core.h"
+#include <math.h>
 
 ///////////////////////////////////////////////////////////
 // Damian: Some regular macros
@@ -196,6 +197,14 @@ Bounding_box bounding_box_make(F32 x0, F32 y0, F32 x1, F32 y1);
 U64 align_up(U64 value, U64 alignment);
 U8* align_up_p(U8* p, U64 alignment);
 F32 clamp_f32(F32 value, F32 min, F32 max);
+// F32 quick_sort(void* arr, U64 arr_len, U64 el_size_in_bytes)
+// {
+//   qsort(arr, arr_len, el_size_in_bytes, );
+//   void *base,
+//    size_t number,
+//    size_t width,
+//    int (__cdecl *compare )(const void *, const void *)
+// }
 
 // Damian: Colors
 typedef Vec4_F32 Color;
@@ -221,6 +230,7 @@ typedef Vec4_F32 Color;
 
 Color color_make(F32 r, F32 g, F32 b, F32 a);
 Color color_set_a(Color color, F32 new_a);
+Color color_normalise(F32 r, F32 g, F32 b, F32 a);
 
 #endif
 

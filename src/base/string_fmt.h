@@ -154,6 +154,19 @@ U64 u64_from_str8(Str8 str)
   return result_value;
 }
 
+S64 s64_from_str8(Str8 str)
+{
+  // TODO: Fix this code pls
+  S64 s64 = 0;
+  DefereInitReleaseLoop(Scratch scratch = get_scratch(0, 0), end_scratch(&scratch))
+  {
+    Str8 str_nt = str8_from_str8_alloc(scratch.arena, str);
+    int value = atoi((char*)str_nt.data);
+    s64 = (S64)value;
+  }
+  return s64;
+}
+
 
 
 

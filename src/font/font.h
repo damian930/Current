@@ -7,11 +7,6 @@
 // TODO: This shourd get removed from here later
 #include "other/image_stuff/image_loader.h"
 
-#ifndef STB_TRUE_TYPE_H
-#define STB_TRUE_TYPE_H
-  #include "third_party/stb/stb_truetype.h"
-#endif
-
 // TODO: Support codepoints like space that have width and height, but are not represented with a texture or a bb on atlas for plyph
 
 struct Font_codepoint_data_node {

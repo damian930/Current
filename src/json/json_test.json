@@ -1,0 +1,13 @@
+{
+  "players_data": 
+  [
+    {
+      "name": "Moneymaker",
+      "age": 16
+    },
+    {
+      "name": "Peterbot",
+      "age": 18
+    }
+  ]
+}

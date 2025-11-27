@@ -27,7 +27,6 @@ enum UI_size_kind {
 struct UI_size {
   UI_size_kind kind;
   F32 value;
-  F32 strictness;
 };
 
 // TODO: I wanted this to be in some other spot, but i just cant make it compile
@@ -41,8 +40,8 @@ struct UI_size {
   UI_STACK_DATA( UI_text_color_stack,       text_color_stack,       UI_text_color_node,      node, Color,   value, C_WHITE,               ui_push_text_color,       ui_pop_text_color,       ui_current_text_color      ) \
   UI_STACK_DATA( UI_padding_stack,          padding_stack,          UI_padding_node,         node, F32,     value, 0.0f,                  ui_push_padding,          ui_pop_padding,          ui_current_padding         ) \
   UI_STACK_DATA( UI_padding_color_stack,    padding_color_stack,    UI_padding_color_node,   node, Color,   value, C_TRANSPARENT,         ui_push_padding_color,    ui_pop_padding_color,    ui_current_padding_color   ) \
-  UI_STACK_DATA( UI_size_x_stack,           size_x_stack,           UI_size_x_node,          node, UI_size, value, ui_size_px_make(0.0f, 1.0f), ui_push_size_x,           ui_pop_size_x,           ui_current_size_x          ) \
-  UI_STACK_DATA( UI_size_y_stack,           size_y_stack,           UI_size_y_node,          node, UI_size, value, ui_size_px_make(0.0f, 1.0f), ui_push_size_y,           ui_pop_size_y,           ui_current_size_y          ) \
+  UI_STACK_DATA( UI_size_x_stack,           size_x_stack,           UI_size_x_node,          node, UI_size, value, ui_size_px_make(0.0f), ui_push_size_x,           ui_pop_size_x,           ui_current_size_x          ) \
+  UI_STACK_DATA( UI_size_y_stack,           size_y_stack,           UI_size_y_node,          node, UI_size, value, ui_size_px_make(0.0f), ui_push_size_y,           ui_pop_size_y,           ui_current_size_y          ) \
   UI_STACK_DATA( UI_layout_axis_stack,      layout_axis_stack,      UI_layout_axis_node,     node, Axis2,   value, Axis2_y,               ui_push_layout_axis,      ui_pop_layout_axis,      ui_current_layout_axis     )                                                   
 
 // Declaring stacks 
@@ -64,15 +63,20 @@ struct UI_size {
 
 enum UI_box_flag : U32 {
   UI_box_flag__NONE            = (1 << 0),
+  
   // Regular features
   UI_box_flag__has_backgound   = (1 << 1),
   UI_box_flag__has_text        = (1 << 2),
   UI_box_flag__has_texture     = (1 << 3),
+  UI_box_flag__text_colapse    = (1 << 4),
+   
   // Interactions
-  UI_box_flag__clickable       = (1 << 4),
+  UI_box_flag__clickable       = (1 << 5),
+  
   // Extra drawings
-  UI_box_flag__draw_padding    = (1 << 5),
-  UI_box_flag__draw_child_gap  = (1 << 6),
+  UI_box_flag__draw_padding    = (1 << 6),
+  UI_box_flag__draw_child_gap  = (1 << 7),
+  UI_box_flag__draw_text_box   = (1 << 8),
 };
 typedef U32 UI_box_flags;
 
@@ -149,6 +153,7 @@ struct UI_state {
 };
 
 global UI_state* g_ui_state = 0;
+global UI_Box* g_ui_box_sentinel_null = 0;
 
 // TODO: Remove this, this is here for debug now
 void ui_set_texture(Texture2D texture)
@@ -160,16 +165,16 @@ void ui_set_texture(Texture2D texture)
 // ---------------------------------------------
 
 // Sizes
-UI_size ui_size_make(UI_size_kind kind, F32 value, F32 strictness);
-UI_size ui_size_px_make(F32 value, F32 strictness);
+UI_size ui_size_make(UI_size_kind kind, F32 value);
+UI_size ui_size_px_make(F32 value);
 UI_size ui_size_child_sum_make();
-UI_size ui_size_text_make(F32 strictness);
+UI_size ui_size_text_make();
 UI_size ui_size_percent_of_parent_make(F32 p);
 UI_size ui_size_fit_the_parent_make(F32 grow_value);
 
-// Damian: Key format is dear imgui like
+// Key stuff
 // Str8 ui_key_from_str8(Str8 str);
-// Str8 ui_key_from_cstr(const char* cstr);
+Str8 ui_null_key();
 
 // State
 void ui_state_init(Win32_window* window, Font_info* font_info);
@@ -179,19 +184,19 @@ void ui_state_release();
 Arena* ui_current_build_arena();  
 Arena* ui_prev_build_arena();
 
-// UI_Box* ui_get_box_with_key_opt(UI_Box* root, Str8 key);
+UI_Box* ui_box_from_key__sentinel_null(UI_Box* root, Str8 key);
 // B32 test_inputs_for_box(UI_Box* box);
 // B32 ui_is_clicked();
 
 // UI element creation stuff
 // TODO: Either remove 1 of these or make a parameter specific (cstr/str8) name
-UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text);
-UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags, Str8 text);
+UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags);
+UI_Box* ui_allocated_and_set_up_box(Str8 key, UI_box_flags flags);
 
 void ui_begin_build();
 void ui_end_build();
 
-UI_Box* ui_begin_box(Str8 key, UI_box_flags flags, Str8 text);
+UI_Box* ui_begin_box(Str8 key, UI_box_flags flags);
 void ui_end_box();
 
 // UI sizing/layout/pos stuff
@@ -209,7 +214,7 @@ void ui_draw_ui();
 void ui_draw_padding_for_current(Color padding_color);
 void ui_draw_child_gap_color(Color gap_color);
 
-UI_Inputs ui_box_make(Str8 key, UI_box_flags flags, Str8 text);
+UI_Inputs ui_box_make(Str8 key, UI_box_flags flags);
 
 // Stack functions
 #define UI_STACK_DATA(stack_struct_name, stack_var_name,                    \

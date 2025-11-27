@@ -149,7 +149,7 @@ OS_Win32_file os_win32_file_open(Str8 file_path, U32 access_flags)
   if (access_flags & File_access_flag_append) { creation_parameters = OPEN_ALWAYS; }  // Doesnt truncate
 
   // Str8 file_path_null_term = str8_from_str8_temp_null_term(scratch.arena, file_path);
-  Scratch scratch = get_scratch();
+  Scratch scratch = get_scratch(0, 0);
   Str8 file_path_null_term = str8_from_str8_alloc(scratch.arena, file_path);
   HANDLE file_handle = CreateFileA((CHAR *)file_path_null_term.data, 
                                    desired_access, 
@@ -226,7 +226,7 @@ void os_win32_file_write(OS_Win32_file file, Data_buffer buffer)
 
 void os_win32_file_delete(Str8 file_name)
 {
-  Scratch scratch = get_scratch();
+  Scratch scratch = get_scratch(0, 0);
   {
     Str8 file_name_nt = str8_from_str8_alloc(scratch.arena, file_name);
     DeleteFileA((const CHAR*)file_name_nt.data);
@@ -238,7 +238,7 @@ B32 os_win32_file_does_exist(Str8 file_name)
 {
   // TODO: All these A path and names have to be converted to UTF-16 and used for W variants of win32 functions
   B32 does_exist = false;
-  Scratch scratch = get_scratch();
+  Scratch scratch = get_scratch(0, 0);
   {
     Str8 name_nt = str8_from_str8_alloc(scratch.arena, file_name);
     U32 attrs = GetFileAttributesA((const CHAR*)name_nt.data);
@@ -283,17 +283,39 @@ OS_Win32_file_data os_win32_file_data(OS_Win32_file file)
 //
 // TODO: Mark these with g_ 
 Arena* scratch_arenas[NumberOfScratchArenas];
-U32 current_scratch_index = 0;
 
 StaticAssert(ArrayCount(scratch_arenas) == 2, "get_scratch doesnt work if the number of scratch arenas doesnt equal 2.");
-Scratch get_scratch()
+Scratch get_scratch(Arena** conlisions_arr, U32 colisions_arr_count)
 {
-  Assert(g_os_win32_state.is_initialised);
+  if (!g_os_win32_state.is_initialised)
+  {
+    printf("Error, the os layer is not initialised, but a scratch arena is atempting to be used. \n");
+    printf("Att logging and some printf like these, also some dev time assert just to have it be visible and stuff maybe for top level layers \n");
+    os_win32_exit(1);
+    Assert(false);
+  }
+  
+  Arena* usable_arena = 0;
+  for (U64 scratch_index = 0; scratch_index < ArrayCount(scratch_arenas); scratch_index += 1)
+  {
+    B32 is_colision = false;
+    Arena* scratch_arena = scratch_arenas[scratch_index];
+    for (U64 colision_index = 0; colision_index < colisions_arr_count; colision_index += 1)
+    {
+      Arena* colision_arena = conlisions_arr[colision_index];
+      if (scratch_arena == colision_arena)
+      {
+        is_colision = true;
+        break;
+      }
+    }
+    if (!is_colision)
+    {
+      usable_arena = scratch_arena;
+    }
+  }
 
-  Assert(current_scratch_index == 0 || current_scratch_index == 1);
-  current_scratch_index = (current_scratch_index == 0 ? 1 : 0);
-  Arena* arena = scratch_arenas[current_scratch_index];
-  Scratch scratch = temp_arena_begin(arena); 
+  Scratch scratch = temp_arena_begin(usable_arena); 
   return scratch;  
 }
 

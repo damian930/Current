@@ -47,45 +47,6 @@ struct Win32_snapshot_process_list {
 Win32_snapshot_process_list* win32_get_snapshot_and_process_handles(Arena* arena);
 void win32_release_snapshot_and_process_handles(Win32_snapshot_process_list* list);
 
-// ------
-
-enum Month {
-  Month_January,
-  Month_February,
-  Month_March,
-  Month_April,
-  Month_May,
-  Month_June,
-  Month_July,
-  Month_August,
-  Month_September,
-  Month_October,
-  Month_November,
-  Month_December,
-  Month_Count,
-};
-
-enum Day {
-  Day_Monday,
-  Day_Tuesday,
-  Day_Wednesday,
-  Day_Thursday,
-  Day_Friday,
-  Day_Saturday,
-  Day_Sunday,
-  Day_Count
-};
-
-struct Time { // UTC
-  U32 year;
-  Month month;
-  Day day;
-  U32 hour;
-  U32 minute;
-  U32 second;
-  U32 millie_second;
-};
-
 const char* month_as_cstr(Month month)
 {
   const char* cstr = "";
@@ -125,26 +86,10 @@ const char* day_as_cstr(Day day)
   return cstr;
 }
 
-Time time_from_win32_system_time(SYSTEMTIME* sys_time)
-{
-  Time time = {};
-  time.year          = sys_time->wYear;
-  time.month         = (Month)sys_time->wMonth;
-  time.day           = (Day)sys_time->wDay;
-  time.hour          = sys_time->wHour;
-  time.minute        = sys_time->wMinute;
-  time.second        = sys_time->wSecond;
-  time.millie_second = sys_time->wMilliseconds;
-  return time;
-}
-
 Str8 time_as_str8(Arena* arena, Time time)
 {
-  UnusedVar(arena);`
-  U8 buffer[512];
-  sprintf((char*)buffer, "%d:%d", time.hour, time.minute);
-  Str8 str = str8_from_cstr((char*)buffer);
-  return str;
+  Str8 result = str8_from_fmt_alloc(arena, "#U32:#U32", time.hour, time.minute);
+  return result;
 }
 
 ///////////////////////////////////////////////////////////

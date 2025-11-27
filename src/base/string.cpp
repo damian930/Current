@@ -117,7 +117,7 @@ Str8 str8_from_list(Arena* arena, Str8_list* list)
   return str;
 }
 
-B32 str8_match(Str8 str, Str8 other, Str8_match_flags flags)
+B32 str8_match_ex(Str8 str, Str8 other, Str8_match_flags flags)
 {
   B32 result = true;
   if (str.count != other.count) 
@@ -149,24 +149,20 @@ B32 str8_match(Str8 str, Str8 other, Str8_match_flags flags)
   return result;
 }
 
-B32 str8_match_cstr(Str8 str, const char* c_str, Str8_match_flags flags)
+B32 str8_match(Str8 str, Str8 other)
 {
-  B32 result = false;
-  Scratch scratch = get_scratch();
-  {
-    Str8 other_str = str8_from_cstr(c_str);
-    result = str8_match(str, other_str, flags);
-  } 
-  end_scratch(&scratch);
-  return result;
+  B32 is_match = str8_match_ex(str, other, Str8_match_flag_NONE);
+  return is_match;
 }
 
 Str8 str8_substring_range(Str8 str, Range_U64 range)
 {
   Str8 result = {};
+  result.data = str.data;
+  result.count = 0;
   {
     if (range.min > range.max) {
-      SwapVaues(U64, range.min, range.max);
+      SwapVaues(U64, range.min, range.max); 
     }
     range.max = Min(range.max, str.count);
     if (range.min < range.max)
@@ -184,6 +180,37 @@ Str8 str8_substring_index(Str8 str, U64 start_index, U64 index_1_after_last)
   return sub_str;
 }
 
+// TODO: Might just return the index that is greater than the cound for the str.
+//       This way i can just if myself, but then i dont have to have kind of 2 return value
+//       And i also dont have to create a result thing.
+//       But this also might then make me access a value that i am not supposed to acces.
+//       Guess here for safety i kind of want the type safery to enforce the unwrap on me.
+//       Maybe a result type then.
+B32 str8_does_contain_substring(Str8 str, Str8 substring, U64* out_start_index)
+{
+  // Test## -- ##
+  // 3, 5
+
+  B32 does_contain = false;
+  if (str.count >= substring.count)
+  {
+    for (U64 str_index = 0; 
+         str_index < str.count, str_index + substring.count <= str.count; 
+         str_index += 1)
+    {
+      Str8 test_sub = str8_substring_index(str, str_index, str_index + substring.count);
+      if (str8_match(test_sub, substring))
+      {
+        does_contain = true;
+        *out_start_index = str_index;
+        break;
+      }
+    }
+  }
+  return does_contain;
+}
+
+// TODO: This might then use the "str8_does_contain_substring" or something.
 Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, Str8_match_flags flags)
 {
   Str8_list list = {};
@@ -198,7 +225,7 @@ Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, Str8_match_flags 
         break; 
       }
       Str8 test_sep = str8_substring_range(str, range_u64(char_index, char_index + sep.count));
-      if (str8_match(test_sep, sep, flags))
+      if (str8_match_ex(test_sep, sep, flags))
       {
         Str8 sub_str = str8_substring_range(str, range_u64(sub_string_start_index, char_index));
         str8_list_push_str(arena, &list, sub_str);
@@ -219,7 +246,7 @@ Str8_list str8_split_by_str8(Arena* arena, Str8 str, Str8 sep, Str8_match_flags 
 Str8_list str8_split_by_cstr(Arena* arena, Str8 str, const char* sep, Str8_match_flags flags)
 {
   Str8_list list = {};
-  Scratch scratch = get_scratch();
+  Scratch scratch = get_scratch(&arena, 1);
   {
     list = str8_split_by_str8(arena, str, str8_from_cstr(sep), flags);
   }
@@ -231,7 +258,7 @@ Str8_list str8_split_by_cstr(Arena* arena, Str8 str, const char* sep, Str8_match
 Str8 get_file_basename(Str8 path)
 {
   Str8 result = {};
-  Scratch scratch = get_scratch();
+  Scratch scratch = get_scratch(0, 0);
   {
     Str8_list split_list = str8_split_by_str8(scratch.arena, 
                                               path, 
@@ -250,7 +277,7 @@ Str8 get_file_name(Str8 path)
 {
   Str8 result = {};
   Str8 basename = get_file_basename(path);
-  Scratch scratch = get_scratch();
+  Scratch scratch = get_scratch(0, 0);
   {
     Str8_list split_list = str8_split_by_str8(scratch.arena, 
                                               basename, 
@@ -269,7 +296,7 @@ Str8 get_file_extension(Str8 path)
 {
 Str8 result = {};
   Str8 basename = get_file_basename(path);
-  Scratch scratch = get_scratch();
+  Scratch scratch = get_scratch(0, 0);
   {
     Str8_list split_list = str8_split_by_str8(scratch.arena, 
                                               basename, 
@@ -308,7 +335,7 @@ void str8_printf(const char* fmt, ...)
 {
   va_list args = {};
   DefereInitReleaseLoop(va_start(args, fmt), va_end(args))
-  DefereInitReleaseLoop(Scratch scratch = get_scratch(), end_scratch(&scratch))
+  DefereInitReleaseLoop(Scratch scratch = get_scratch(0, 0), end_scratch(&scratch))
   {
     Str8 formated_str = str8_fmt_format(scratch.arena, fmt, args);
     Str8 formated_str_nt = str8_from_str8_alloc(scratch.arena, formated_str);

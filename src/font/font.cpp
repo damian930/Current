@@ -1,14 +1,21 @@
 #ifndef D_FONT_CPP
 #define D_FONT_CPP
 
+#ifndef STB_TRUETYPE_IMPLEMENTATION 
+#define STB_TRUETYPE_IMPLEMENTATION 
+  #include "third_party/stb/stb_truetype.h"
+#endif
+
 #ifndef STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
   #include "third_party/stb/stb_image_write.h"
 #endif
 
-// #include "other/image_stuff/image_loader.cpp"
-
-#define STB_TRUETYPE_IMPLEMENTATION
+// Damian: This was added on 24th of November 2025
+//         Kerning currently might not work, but it does work. 
+//         I just dont want to fix it now if it doesnt at some point.
+//         So this macro here just for clarity until i really need it to be working.
+#define FONT_KERNING_WORKING 0
 
 #include "font.h"
 #include "base/math.cpp"
@@ -18,7 +25,7 @@ Font_info* load_font(Arena* arena, Range_U32 range_of_codepoints,
 ) {
   Font_info* result_font_info = ArenaPush(arena, Font_info);
 
-  Scratch scratch = get_scratch();
+  Scratch scratch = get_scratch(&arena, 1);
   {
     // Getting the ttf data, Creating the font
     Data_buffer ttf_data = os_win32_file_read_inplace(scratch.arena, font_ttf_file_path);
@@ -261,11 +268,14 @@ Vec2_F32 font_measure_text(Font_info* font_info, Str8 text)
       if (index < text.count - 1)
       {
         U8 next_codepoint = text.data[index + 1];
+
+        #if FONT_KERNING_WORKING
         Font_kern_pair* kern_pair = font_get_kern_pair_opt(font_info, codepoint, next_codepoint);      
         if (kern_pair)
         {
           result_width += kern_pair->advance;
         }
+        #endif
       }
     }
     else 
@@ -292,7 +302,7 @@ Texture2D create_a_texture_from_font_atlas(Font_info* font_info)
   //       but i couldnt figure out where to slam that handle, so no handle for now
 
   Texture2D texture = {};
-  Scratch scratch = get_scratch();
+  Scratch scratch = get_scratch(0, 0);
   {
     U32 h = font_info->font_atlas.width;
     U32 w = font_info->font_atlas.height;

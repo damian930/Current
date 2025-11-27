@@ -4,9 +4,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "third_party/stb/stb_image.h"
 
-#define STB_TRUETYPE_IMPLEMENTATION  
-#include "third_party/stb/stb_truetype.h"
-
 #include "image_loader.h"
 #include "base/string.cpp"
 #include "base/arena.cpp"
@@ -14,7 +11,7 @@
 Image2D load_png(Arena* arena, Str8 file_path, B32 do_flip_y)
 { 
   Str8 ext = get_file_extension(file_path);
-  if (!str8_match_cstr(ext, "png", Str8_match_flag_NONE))
+  if (!str8_match(ext, Str8FromClit("png")))
   {
     printf("NO MATCH PNG \n");
     exit(1);
@@ -22,7 +19,7 @@ Image2D load_png(Arena* arena, Str8 file_path, B32 do_flip_y)
 
   unsigned char* data = 0;
   int width = 0, height = 0, nrChannels = 0;
-  Scratch scratch = get_scratch();
+  Scratch scratch = get_scratch(&arena, 1);
   {
     stbi_set_flip_vertically_on_load(do_flip_y);
     Str8 path_nt = str8_from_str8_alloc(scratch.arena, file_path);
