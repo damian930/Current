@@ -1,3 +1,18 @@
+// < // TODO: This is for testing if it catched an unexpected token
+
+// []
+// [1, 2, 3, 4]
+// [,]
+// [1, 2,]
+// [1 2]
+
+// --------
+
+// {
+//   "players_data": 2,
+//   "other": []
+// }
+
 {
   "players_data": 
   [

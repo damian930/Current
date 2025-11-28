@@ -117,6 +117,28 @@ Str8 str8_from_list(Arena* arena, Str8_list* list)
   return str;
 }
 
+Str8 str8_from_list_v(Arena* arena, U32 number_of_strings, ...)
+{
+  Str8 result_str = {};
+  va_list args = {};
+  DefereLoop(va_start(args, number_of_strings), va_end(args))
+  DefereInitReleaseLoop(Scratch scratch = get_scratch(&arena, 1), end_scratch(&scratch))
+  {
+    Str8_list* list = ArenaPush(scratch.arena, Str8_list);
+    for (U32 i = 0; i < number_of_strings; i += 1)
+    {
+      Str8 str = (Str8)va_arg(args, Str8);
+      str8_list_push_str(scratch.arena, list, str);
+      if (i > 100) 
+      { 
+        break; // This is just in case something goes wrong, i want the loop to just stop
+      }
+    }
+    result_str = str8_from_list(arena, list);
+  }
+  return result_str;
+}
+
 B32 str8_match_ex(Str8 str, Str8 other, Str8_match_flags flags)
 {
   B32 result = true;

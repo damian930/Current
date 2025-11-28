@@ -8,6 +8,13 @@
 
 // TODO: Add rjd/martins like preprocesor define for platforms, bitnes, debug/release ...
 
+#ifdef _MSC_VER 
+	#define COMPILER_MSVC
+#else
+	static_assert(false, "Code doesnt compile for a non msvc compiler")
+#endif
+
+
 #ifndef DEBUG_MODE
 #define DEBUG_MODE 1
 #endif

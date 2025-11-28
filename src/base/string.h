@@ -53,6 +53,7 @@ B32 is_char_a_number(U8 ch);
 
 void str8_list_push_str(Arena* arena, Str8_list* list, Str8 str);
 Str8 str8_from_list(Arena* arena, Str8_list* list);
+Str8 str8_from_list_v(Arena* arena, U32 number_of_strings, ...);
 
 B32 str8_match_ex(Str8 str, Str8 other, Str8_match_flags flags);
 B32 str8_match(Str8 str, Str8 other);

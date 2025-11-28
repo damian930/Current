@@ -53,13 +53,35 @@ int main()
 void EntryPoint()
 {
   Arena* arena = arena_alloc(Kilobytes_U64(64), "Json arena");
-  
+ 
+  // DefereInitReleaseLoop(Scratch scratch = get_scratch(0, 0), end_scratch(&scratch))
+  // {
+  //   Str8 str = str8_from_list_v(scratch.arena, 2, Str8FromClit("1 --> "), Str8FromClit("2"));
+  //   str8_printf("#Str8 \n", str);
+  // }
+
+
   DefereInitReleaseLoop(Scratch scratch = get_scratch(0, 0), end_scratch(&scratch))
   {
     Data_buffer file_buffer = os_win32_file_read_inplace(scratch.arena, Str8FromClit("../src/json/json_test.json"));
-    Json_value* ast = test_create_ast_for_json(arena, file_buffer);
-    Str8 json_as_str = json_debug_recreate_json(arena, ast);
-    str8_printf("#Str8 \n", json_as_str); 
+    
+    Json_lexer lexer = {};
+    lexer.input_text = file_buffer;
+
+    // Json_parse_result result = json_number_value_from_number_token(arena, &lexer);
+    // Json_parse_result result = json_parse_string_value(arena, &lexer);
+    Json_parse_result result = json_parse_value(arena, &lexer);
+    if (result.error != Json_error_kind__NONE)
+    {
+      str8_printf("Result_error: #Str8 \n", result.note);
+    }
+    else 
+    {
+      json_debug_print(result.value);
+    }
+    // Json_value* ast = test_create_ast_for_json(arena, file_buffer);
+    // Str8 json_as_str = json_debug_recreate_json(arena, ast);
+    // str8_printf("#Str8 \n", json_as_str); 
   }
 
 }
